@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    //"types": [],
+    "skipLibCheck": true,
+    "lib": ["dom", "esnext"]
+  },
+  "exclude": ["node_modules"]
+}
