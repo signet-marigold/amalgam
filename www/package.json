@@ -21,6 +21,7 @@
   "author": "Alex Hack & Dan Myers",
   "license": "GPLv2",
   "dependencies": {
+    "amalgam": "file:../pkg",
     "gh-pages": "^6.3.0",
     "typescript": "^5.8.2"
   },
