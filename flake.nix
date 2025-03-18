@@ -14,7 +14,10 @@
         cargo
         cargo-generate
         nodejs
+        rustup
         wasm-pack
+        leptosfmt
+        trunk
       # build
         lld_19
         typescript
