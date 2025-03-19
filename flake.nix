@@ -8,19 +8,11 @@
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     devShell.${system} = pkgs.mkShell {
+      name = "amalgam";
       buildInputs = with pkgs; [
-      # dev
-        rustc
-        cargo
-        cargo-generate
-        nodejs
-        rustup
-        wasm-pack
-        leptosfmt
-        trunk
-      # build
-        lld_19
         typescript
+        bun
+        nodejs_23
       ];
     };
   };
