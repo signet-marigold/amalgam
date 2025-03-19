@@ -1,0 +1,17 @@
+Architecture Overview
+
+    1. Component Structure
+        - Rust/WASM Core
+            - Timeline management (clips, tracks)
+            - Export orchestration
+            - Audio waveform calculation
+            - Thumbnail generation logic
+        - TypeScript Frontend
+            - Editor UI (React/Vue)
+            - WebCodecs video encoding
+            - FFmpeg.wasm integration
+            - Canvas-based preview renderer
+
+    2. Data Flow
+        - User interactions → TypeScript → Rust/WASM (processing) → TypeScript (rendering)
+        - Media files → FFmpeg.wasm → Processed assets → WebCodecs → Final output

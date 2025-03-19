@@ -1,0 +1,602 @@
+:root {
+  --primary-color: #4CAF50;
+  --secondary-color: #2196F3;
+  --bg-color: #1a1a1a;
+  --bg-color-light: #2a2a2a;
+  --text-color: #f0f0f0;
+  --text-color-muted: #a0a0a0;
+  --border-color: #3a3a3a;
+  --track-bg: #232323;
+  --track-header-bg: #1a1a1a;
+  --clip-video-bg: #2196F3;
+  --clip-audio-bg: #4CAF50;
+  --timeline-bg: #141414;
+  --playhead-color: #ff3d00;
+  --ruler-color: #3a3a3a;
+  --ruler-text: #a0a0a0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  overflow-x: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Header */
+.app-header {
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-header h1 {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background-color: var(--bg-color);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn.primary:hover {
+  background-color: #3d8b40;
+}
+
+.btn.secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+.btn.secondary:hover {
+  background-color: #0c7cd5;
+}
+
+.btn.small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.btn.icon {
+  padding: 0.25rem 0.5rem;
+  font-weight: bold;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Select */
+.select {
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+}
+
+/* Main layout */
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Clip pool section */
+.clip-pool-container {
+  background-color: var(--bg-color);
+  border-top: 1px solid var(--border-color);
+  padding: 0.5rem;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.clip-pool-container h3 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.clip-pool {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  flex: 1;
+}
+
+.pool-clip {
+  width: 120px;
+  height: 85px;
+  background-color: var(--bg-color-light);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.pool-clip.selected {
+  border-color: var(--primary-color);
+}
+
+.pool-clip.video {
+  background-color: rgba(33, 150, 243, 0.3);
+}
+
+.pool-clip.audio {
+  background-color: rgba(76, 175, 80, 0.3);
+}
+
+.pool-clip-thumbnail {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.pool-clip-info {
+  padding: 0.25rem;
+  font-size: 0.7rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pool-clip-type {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.clip-pool-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn.danger {
+  background-color: #f44336;
+  border-color: #f44336;
+}
+
+/* Preview section */
+.preview-container {
+  background-color: var(--bg-color);
+  padding: 1rem;
+  height: 60%;
+  min-height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+#preview-canvas {
+  background-color: black;
+  max-width: 100%;
+  max-height: calc(100% - 40px);
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.preview-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.time-display {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: var(--text-color-muted);
+}
+
+/* Timeline section */
+.timeline-container {
+  background-color: var(--timeline-bg);
+  border-top: 1px solid var(--border-color);
+  height: 40%;
+  min-height: 200px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.timeline {
+  position: relative;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.timeline-ruler {
+  height: 24px;
+  position: relative;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ruler-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 1px;
+  background-color: var(--ruler-color);
+}
+
+.ruler-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 0.7rem;
+  color: var(--ruler-text);
+  white-space: nowrap;
+}
+
+.timeline-tracks {
+  position: relative;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: var(--playhead-color);
+  z-index: 100;
+}
+
+.playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--playhead-color);
+  border-radius: 50%;
+  transform: translateY(-9px);
+  cursor: pointer;
+}
+
+.timeline-cursor-controls {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  z-index: 110;
+}
+
+.timeline-cursor-btn {
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+.timeline-cursor-btn:hover {
+  background-color: var(--primary-color);
+}
+
+.timeline-cursor-btn:active {
+  transform: scale(0.95);
+}
+
+/* Tracks */
+.track {
+  position: relative;
+  display: flex;
+  height: 80px;
+  margin-bottom: 1px;
+}
+
+.track-header {
+  width: 120px;
+  min-width: 120px;
+  background-color: var(--track-header-bg);
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  border-right: 1px solid var(--border-color);
+}
+
+.track-content {
+  flex: 1;
+  position: relative;
+  background-color: var(--track-bg);
+}
+
+.video-track .track-header {
+  color: var(--clip-video-bg);
+}
+
+.audio-track .track-header {
+  color: var(--clip-audio-bg);
+}
+
+/* Clips */
+.clip {
+  position: absolute;
+  top: 5px;
+  height: calc(100% - 10px);
+  background-color: var(--bg-color-light);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-clip {
+  background-color: var(--clip-video-bg);
+}
+
+.audio-clip {
+  background-color: var(--clip-audio-bg);
+}
+
+.clip-info {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.clip-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clip-time {
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+.clip-thumbnail, .clip-waveform {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+}
+
+.clip-handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.clip-handle-left {
+  left: 0;
+}
+
+.clip-handle-right {
+  right: 0;
+}
+
+/* Dialog */
+.dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background-color: var(--bg-color-light);
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dialog h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Progress bar */
+.progress-container {
+  margin: 1.5rem 0;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: var(--bg-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--primary-color);
+  transition: width 0.3s;
+}
+
+#progress-text {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-color-muted);
+}
+
+/* Loading indicator */
+.loading-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-indicator p {
+  margin-top: 1rem;
+  font-size: 1rem;
+}
+
+/* Notification */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 400px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.notification.error {
+  background-color: #f44336;
+  color: white;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* Utility classes */
+.hidden {
+  display: none !important;
+}

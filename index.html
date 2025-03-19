@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Video Editor</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Browser Video Editor</h1>
+      <div class="toolbar">
+        <button id="import-btn" class="btn primary">Import Media</button>
+        <button id="export-btn" class="btn primary">Export Video</button>
+        <select id="resolution-select" class="select">
+          <option value="720p">720p</option>
+          <option value="1080p" selected>1080p</option>
+          <option value="4k">4K</option>
+        </select>
+        <select id="framerate-select" class="select">
+          <option value="24">24 fps</option>
+          <option value="30" selected>30 fps</option>
+          <option value="60">60 fps</option>
+        </select>
+      </div>
+    </header>
+
+    <main class="editor-container">
+      <section class="preview-container">
+        <div class="preview-wrapper">
+          <canvas id="preview-canvas"></canvas>
+          <div class="preview-controls">
+            <button id="play-pause-btn" class="btn icon">▶</button>
+            <div id="time-display" class="time-display">00:00:00 / 00:00:00</div>
+          </div>
+        </div>
+      </section>
+      
+      <section class="clip-pool-container">
+        <h3>Media Library</h3>
+        <div id="clip-pool" class="clip-pool">
+          <!-- Clips will be dynamically populated here -->
+        </div>
+        <div class="clip-pool-controls">
+          <button id="add-to-timeline-btn" class="btn small" disabled>Add to Timeline</button>
+          <button id="delete-clip-btn" class="btn small danger" disabled>Delete</button>
+        </div>
+      </section>
+
+      <section class="timeline-container">
+        <div class="timeline-controls">
+          <button id="zoom-in-btn" class="btn small">+</button>
+          <button id="zoom-out-btn" class="btn small">-</button>
+          <button id="split-btn" class="btn small">Split</button>
+        </div>
+        <div id="timeline" class="timeline">
+          <div class="timeline-ruler" id="timeline-ruler"></div>
+          <div class="timeline-tracks" id="timeline-tracks">
+            <!-- Tracks will be dynamically populated -->
+            <div class="track video-track" id="video-track-1">
+              <!-- Video clips will be dynamically populated -->
+            </div>
+            <div class="track audio-track" id="audio-track-1">
+              <!-- Audio clips will be dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="export-dialog" class="dialog hidden">
+      <div class="dialog-content">
+        <h2>Export Video</h2>
+        <div class="form-group">
+          <label for="export-format">Format:</label>
+          <select id="export-format" class="select">
+            <option value="mp4">MP4</option>
+            <option value="webm">WebM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="export-resolution">Resolution:</label>
+          <select id="export-resolution" class="select">
+            <option value="720p">720p (1280x720)</option>
+            <option value="1080p" selected>1080p (1920x1080)</option>
+            <option value="4k">4K (3840x2160)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="export-framerate">Frame Rate:</label>
+          <select id="export-framerate" class="select">
+            <option value="24">24 fps</option>
+            <option value="30" selected>30 fps</option>
+            <option value="60">60 fps</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="export-quality">Quality:</label>
+          <input type="range" id="export-quality" min="1" max="100" value="80">
+          <span id="quality-value">80%</span>
+        </div>
+        <div id="export-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+          </div>
+          <div id="progress-text">0%</div>
+        </div>
+        <div class="dialog-buttons">
+          <button id="export-cancel-btn" class="btn">Cancel</button>
+          <button id="export-confirm-btn" class="btn primary">Export</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="file-input" accept="video/*,audio/*" multiple style="display: none;">
+    
+    <div id="loading-indicator" class="loading-indicator hidden">
+      <div class="spinner"></div>
+      <p>Processing...</p>
+    </div>
+    
+    <div id="error-notification" class="notification error hidden">
+      <span id="error-message"></span>
+      <button class="close-btn">×</button>
+    </div>
+  </div>
+</body>
+</html>

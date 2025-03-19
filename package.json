@@ -1,0 +1,33 @@
+{
+  "name": "video-editor-wasm",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack serve --mode development --host 0.0.0.0",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "video-editor",
+    "ffmpeg"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "A browser-based video editor using TypeScript frontend",
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.11.6",
+    "@ffmpeg/core": "^0.11.0",
+    "@stripe/react-stripe-js": "^2.1.0",
+    "@stripe/stripe-js": "^1.54.0",
+    "stripe": "^12.0.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.7.3",
+    "html-webpack-plugin": "^5.5.1",
+    "style-loader": "^3.3.2",
+    "ts-loader": "^9.4.3",
+    "typescript": "^5.0.4",
+    "webpack": "^5.84.1",
+    "webpack-cli": "^5.1.1",
+    "webpack-dev-server": "^4.15.0"
+  }
+}
