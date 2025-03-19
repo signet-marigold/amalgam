@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import ReactPlayer from "react-player";
 import { Button } from "antd";
-import useVideoEditor, { Clip } from "./hooks/useVideoEditor";
+import useVideoEditor from "./hooks/useVideoEditor";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
+import VideoPlayer from "./components/VideoPlayer";
+import FileInput from "./components/FileInput";
+import VolumeControl from "./components/VolumeControl";
 
 const App: React.FC = () => {
   const [ffmpeg, setFFmpeg] = useState<FFmpeg | null>(null);
@@ -44,16 +46,10 @@ const App: React.FC = () => {
     loadFFmpeg();
   }, []);
 
-  // The hook always returns an object with 'clips' and a function 'addClip'
   const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
 
-  // Handler for file input change
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = async (file: File) => {
     if (file) {
-      // Create a temporary URL for the selected video
       setVideoUrl(URL.createObjectURL(file));
       addClip(file);
     }
@@ -63,9 +59,8 @@ const App: React.FC = () => {
     setPlaying((prevPlaying) => !prevPlaying);
   }, []);
 
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setVolume(value / 100);
+  const handleVolumeChange = useCallback((value: number) => {
+    setVolume(value);
   }, []);
 
   if (isFFmpegLoading) {
@@ -78,63 +73,33 @@ const App: React.FC = () => {
 
   return (
     <>
-    <h1 className="text-2xl font-bold text-center">Amalgam</h1>
+      <h1 className="text-2xl font-bold text-center">Amalgam</h1>
+      <div className="w-full flex justify-center">
+        <FileInput onFileChange={handleFileChange} />
+      </div>
 
-    <div className="w-full flex justify-center">
-      <input
-        type="file"
-        accept="video/*"
-        onChange={handleFileChange}
-        className="bg-[#2a2a2a] text-white px-4 py-2 rounded-md"
-      />
-    </div>
-
-    {videoUrl && (
-      <>
-        <div className="w-full flex justify-center">
-          <div className="w-[640px] h-[360px]">
-            <ReactPlayer
-              url={videoUrl}
-              playing={playing}
-              volume={volume}
-              width="640px"
-              height="360px"
-              controls
-              className="rounded-md overflow-hidden"
-            />
+      {videoUrl && (
+        <>
+          <div className="w-full flex justify-center">
+            <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
           </div>
-        </div>
-        
-        <div className="mt-4 flex flex-col items-center justify-center w-full">
-          <Button
-            onClick={handlePlayPause}
-            style={{
-              backgroundColor: '#1a1a1a',
-              borderColor: '#333',
-              color: 'white'
-            }}
-          >
-            {playing ? "Pause" : "Play"}
-          </Button>
           
-          <div className="w-40 p-4">
-            <label className="text-sm text-gray-300 mr-2 mt-5"></label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={volume * 100}
-              onChange={handleVolumeChange}
+          <div className="mt-4 flex flex-col items-center justify-center w-full">
+            <Button
+              onClick={handlePlayPause}
               style={{
-                accentColor: '#3b82f6',
-                backgroundColor: '#333'
+                backgroundColor: '#1a1a1a',
+                borderColor: '#333',
+                color: 'white'
               }}
-              className="w-full h-2 rounded-lg cursor-pointer"
-            />
+            >
+              {playing ? "Pause" : "Play"}
+            </Button>
+            
+            <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
           </div>
-        </div>
-      </>
-    )}
+        </>
+      )}
     </>
   );
 };
