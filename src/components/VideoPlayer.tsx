@@ -9,17 +9,13 @@ interface VideoPlayerProps {
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, playing, volume }) => {
   return (
-    <div className="w-[640px] h-[360px]">
-      <ReactPlayer
-        url={url}
-        playing={playing}
-        volume={volume}
-        width="640px"
-        height="360px"
-        controls={false}
-        className="rounded-md overflow-hidden"
-      />
-    </div>
+    <ReactPlayer
+      url={url}
+      playing={playing}
+      volume={volume}
+      controls={false}
+      className="rounded-md overflow-hidden"
+    />
   );
 };
 

@@ -1,8 +1,106 @@
 {
-  "hash": "36525cd1",
+  "hash": "2bd60517",
   "configHash": "0a76775e",
-  "lockfileHash": "e3b0c442",
-  "browserHash": "92c56963",
-  "optimized": {},
-  "chunks": {}
+  "lockfileHash": "9a566632",
+  "browserHash": "b6695b3d",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "11d04fae",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "d21b6122",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "41a37dfc",
+      "needsInterop": true
+    },
+    "antd": {
+      "src": "../../node_modules/antd/es/index.js",
+      "file": "antd.js",
+      "fileHash": "9b34af96",
+      "needsInterop": false
+    },
+    "@ffmpeg/ffmpeg": {
+      "src": "../../node_modules/@ffmpeg/ffmpeg/dist/esm/index.js",
+      "file": "@ffmpeg_ffmpeg.js",
+      "fileHash": "4d44e83f",
+      "needsInterop": false
+    },
+    "@ffmpeg/util": {
+      "src": "../../node_modules/@ffmpeg/util/dist/esm/index.js",
+      "file": "@ffmpeg_util.js",
+      "fileHash": "a1f6abad",
+      "needsInterop": false
+    },
+    "react-player": {
+      "src": "../../node_modules/react-player/lib/index.js",
+      "file": "react-player.js",
+      "fileHash": "257266d8",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "Mixcloud-KTY5Q4ZW": {
+      "file": "Mixcloud-KTY5Q4ZW.js"
+    },
+    "Vidyard-2VAW3NJL": {
+      "file": "Vidyard-2VAW3NJL.js"
+    },
+    "Kaltura-GT6RU2FM": {
+      "file": "Kaltura-GT6RU2FM.js"
+    },
+    "FilePlayer-DSZSRF7T": {
+      "file": "FilePlayer-DSZSRF7T.js"
+    },
+    "Preview-QCBERYC7": {
+      "file": "Preview-QCBERYC7.js"
+    },
+    "SoundCloud-MDH5JEAS": {
+      "file": "SoundCloud-MDH5JEAS.js"
+    },
+    "Vimeo-OYHPEXU5": {
+      "file": "Vimeo-OYHPEXU5.js"
+    },
+    "Mux-TN6H4S4N": {
+      "file": "Mux-TN6H4S4N.js"
+    },
+    "Facebook-LKBVKDI5": {
+      "file": "Facebook-LKBVKDI5.js"
+    },
+    "Streamable-L7TRB3Z6": {
+      "file": "Streamable-L7TRB3Z6.js"
+    },
+    "Wistia-XRV3XV3V": {
+      "file": "Wistia-XRV3XV3V.js"
+    },
+    "Twitch-ZM42AFCF": {
+      "file": "Twitch-ZM42AFCF.js"
+    },
+    "DailyMotion-TB565WUC": {
+      "file": "DailyMotion-TB565WUC.js"
+    },
+    "chunk-RYGUE54S": {
+      "file": "chunk-RYGUE54S.js"
+    },
+    "YouTube-XKK7PEJL": {
+      "file": "YouTube-XKK7PEJL.js"
+    },
+    "chunk-US4EDENA": {
+      "file": "chunk-US4EDENA.js"
+    },
+    "chunk-DVJ2254P": {
+      "file": "chunk-DVJ2254P.js"
+    },
+    "chunk-OCBYBPSH": {
+      "file": "chunk-OCBYBPSH.js"
+    }
+  }
 }

@@ -75,25 +75,22 @@ const App: React.FC = () => {
       <div className="w-full flex justify-center">
         <FileInput onFileChange={handleFileChange} />
       </div>
-
       {videoUrl && (
         <>
           <div className="w-full flex justify-center">
             <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
           </div>
-          
-          <div className="mt-4 flex flex-col items-center justify-center w-full">
+          <div className="flex flex-col items-center justify-center w-full space-y-4">
             <Button
               onClick={handlePlayPause}
               style={{
-                backgroundColor: '#1a1a1a',
-                borderColor: '#333',
-                color: 'white'
+                backgroundColor: "#1a1a1a",
+                borderColor: "#333",
+                color: "white"
               }}
             >
               {playing ? "Pause" : "Play"}
             </Button>
-            
             <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
           </div>
         </>
