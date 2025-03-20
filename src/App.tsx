@@ -1,45 +1,27 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "antd";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
 import useVideoEditor from "./hooks/useVideoEditor";
+import useFFmpeg from "./hooks/useFFmpeg";
 
 const App: React.FC = () => {
-  const [ffmpeg, setFFmpeg] = useState<FFmpeg | null>(null);
-  const [isFFmpegLoading, setIsFFmpegLoading] = useState(true);
+  const { ffmpeg, isFFmpegLoading } = useFFmpeg();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.3);
 
   // Set dark mode on the entire document
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-    document.body.style.backgroundColor = '#121212';
-    document.body.style.color = 'white';
-    
+    document.documentElement.classList.add("dark");
+    document.body.style.backgroundColor = "#121212";
+    document.body.style.color = "white";
+
     return () => {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     };
-  }, []);
-
-  // Initialize FFmpeg
-  useEffect(() => {
-    const loadFFmpeg = async () => {
-      const ffmpegInstance = new FFmpeg();
-      try {
-        await ffmpegInstance.load();
-        setFFmpeg(ffmpegInstance);
-      } catch (error) {
-        console.error("Error loading FFmpeg:", error);
-      } finally {
-        setIsFFmpegLoading(false);
-      }
-    };
-
-    loadFFmpeg();
   }, []);
 
   const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
@@ -86,7 +68,7 @@ const App: React.FC = () => {
               style={{
                 backgroundColor: "#1a1a1a",
                 borderColor: "#333",
-                color: "white"
+                color: "white",
               }}
             >
               {playing ? "Pause" : "Play"}
