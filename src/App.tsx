@@ -16,12 +16,11 @@ const App: React.FC = () => {
 
   // Set dark mode on the entire document
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-    document.body.style.backgroundColor = '#121212';
-    document.body.style.color = 'white';
-    
+    document.body.classList.add('dark');
+    document.body.classList.remove('preload-style'); // Remove init styles
+
     return () => {
-      document.documentElement.classList.remove('dark');
+      //document.documentElement.classList.remove('dark');
     };
   }, []);
 
@@ -63,7 +62,7 @@ const App: React.FC = () => {
 
   if (isFFmpegLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
+      <div className="flex items-center justify-center min-h-screen">
         <div>Loading ...</div>
       </div>
     );

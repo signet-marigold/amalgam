@@ -6,13 +6,48 @@
         box-sizing: border-box;
     }
 
-    * {
-        margin: 0;
-        padding: 0;
+    body {
+        --primary-color: #4CAF50;
+        --secondary-color: #2196F3;
+        --bg-color: #f0f0f0;
+        --bg-color-light: #a0a0a0;
+        --text-color: #1a1a1a;
+        --text-color-muted: #2a2a2a;
+        --border-color: #3a3a3a;
+        --track-bg: #232323;
+        --track-header-bg: #1a1a1a;
+        --clip-video-bg: #2196F3;
+        --clip-audio-bg: #4CAF50;
+        --timeline-bg: #141414;
+        --playhead-color: #ff3d00;
+        --ruler-color: #3a3a3a;
+        --ruler-text: #a0a0a0;
+    }
+    body.dark {
+        --primary-color: #4CAF50;
+        --secondary-color: #2196F3;
+        --bg-color: #1a1a1a;
+        --bg-color-light: #2a2a2a;
+        --text-color: #f0f0f0;
+        --text-color-muted: #a0a0a0;
+        --border-color: #3a3a3a;
+        --track-bg: #232323;
+        --track-header-bg: #1a1a1a;
+        --clip-video-bg: #2196F3;
+        --clip-audio-bg: #4CAF50;
+        --timeline-bg: #141414;
+        --playhead-color: #ff3d00;
+        --ruler-color: #3a3a3a;
+        --ruler-text: #a0a0a0;
     }
 
-    html {
+    body {
+        margin: 0;
         font-family: sans-serif;
-        color: #333;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        overflow-x: hidden;
+        color: var(--text-color);
+        background: var(--bg-color);
     }
 }
