@@ -11,7 +11,7 @@ const App: React.FC = () => {
   const [isFFmpegLoading, setIsFFmpegLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(0.3);
 
   // Set dark mode on the entire document
   useEffect(() => {

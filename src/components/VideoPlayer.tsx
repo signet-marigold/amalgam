@@ -16,7 +16,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, playing, volume }) => {
         volume={volume}
         width="640px"
         height="360px"
-        controls
+        controls={false}
         className="rounded-md overflow-hidden"
       />
     </div>
@@ -24,4 +24,3 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, playing, volume }) => {
 };
 
 export default VideoPlayer;
-
