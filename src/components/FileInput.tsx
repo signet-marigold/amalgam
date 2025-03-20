@@ -17,7 +17,7 @@ const FileInput: React.FC<FileInputProps> = ({ onFileChange }) => {
       type="file"
       accept="video/*"
       onChange={handleFileChange}
-      className="bg-[#2a2a2a] text-white px-4 py-2 rounded-md"
+      className="bg-[var(--bg-color-light)] text-[var(--text-color)] px-4 py-2 rounded-md"
     />
   );
 };

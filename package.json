@@ -14,6 +14,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@tailwindcss/vite": "^4.0.14",
     "antd": "^5.24.4",
+    "babel-plugin-react-compiler": "^19.0.0-beta-3229e95-20250315",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-player": "^2.16.0",

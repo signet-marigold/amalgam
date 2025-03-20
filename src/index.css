@@ -23,6 +23,7 @@
         --ruler-color: #3a3a3a;
         --ruler-text: #a0a0a0;
     }
+
     body.dark {
         --primary-color: #4CAF50;
         --secondary-color: #2196F3;
