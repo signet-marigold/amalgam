@@ -5,9 +5,7 @@ Amalgam is a modern video player built with React and WebAssembly, designed to p
 ## Features
 
 - 🎥 **High-Performance Playback**: Utilizes WebAssembly for efficient video decoding.
-- 🎨 **Customizable UI**: Fully responsive and customizable user interface built with React.
 - 📂 **Multiple Format Support**: Supports various video formats for versatile playback.
-- 🔍 **Search and Filter**: Easily search and filter your video library.
 - 🌐 **Cross-Platform Compatibility**: Works seamlessly across all modern browsers.
 
 ## Getting Started
