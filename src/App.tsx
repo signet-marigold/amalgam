@@ -1,19 +1,17 @@
+// src/App.tsx
 import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "antd";
-import { fetchFile } from "@ffmpeg/util";
 import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { enableDarkMode } from "./utils/darkmode";
+import { handleFileChange } from "./utils/fileUtils";
 
 const App: React.FC = () => {
-  // Load FFMPEG
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
-
-  // Set dark mode
-  useEffect(() => enableDarkMode());
+  useEffect(() => enableDarkMode(), []);
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -21,13 +19,8 @@ const App: React.FC = () => {
 
   const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
 
-  const handleFileChange = async (file: File) => {
-    if (file) {
-      setVideoUrl(URL.createObjectURL(file));
-      const fileData = await fetchFile(file);
-      const newFile = new File([fileData], file.name, { type: file.type });
-      addClip(newFile);
-    }
+  const onFileChange = async (file: File) => {
+    await handleFileChange(file, setVideoUrl, addClip);
   };
 
   const handlePlayPause = useCallback(() => {
@@ -50,7 +43,7 @@ const App: React.FC = () => {
     <>
       <h1 className="text-2xl font-bold text-center">Amalgam</h1>
       <div className="w-full flex justify-center">
-        <FileInput onFileChange={handleFileChange} />
+        <FileInput onFileChange={onFileChange} />
       </div>
       {videoUrl && (
         <>
