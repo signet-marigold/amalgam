@@ -6,23 +6,18 @@ import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
+import { enableDarkMode } from "./utils/darkmode";
 
 const App: React.FC = () => {
+  // Load FFMPEG
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
+
+  // Set dark mode
+  useEffect(() => enableDarkMode());
+
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.3);
-
-  // Set dark mode on the entire document
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-    document.body.style.backgroundColor = "#121212";
-    document.body.style.color = "white";
-
-    return () => {
-      document.documentElement.classList.remove("dark");
-    };
-  }, []);
 
   const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
 
