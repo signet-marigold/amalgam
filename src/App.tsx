@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "antd";
-import useVideoEditor from "./hooks/useVideoEditor";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile } from "@ffmpeg/util";
 import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
+import useVideoEditor from "./hooks/useVideoEditor";
 
 const App: React.FC = () => {
   const [ffmpeg, setFFmpeg] = useState<FFmpeg | null>(null);
@@ -29,12 +30,7 @@ const App: React.FC = () => {
     const loadFFmpeg = async () => {
       const ffmpegInstance = new FFmpeg();
       try {
-        await ffmpegInstance.load({
-          coreURL:
-            "https://unpkg.com/@ffmpeg/core@v0.12.6/dist/ffmpeg-core.js",
-          wasmURL:
-            "https://unpkg.com/@ffmpeg/core@v0.12.6/dist/ffmpeg-core.wasm"
-        });
+        await ffmpegInstance.load();
         setFFmpeg(ffmpegInstance);
       } catch (error) {
         console.error("Error loading FFmpeg:", error);
@@ -51,7 +47,9 @@ const App: React.FC = () => {
   const handleFileChange = async (file: File) => {
     if (file) {
       setVideoUrl(URL.createObjectURL(file));
-      addClip(file);
+      const fileData = await fetchFile(file);
+      const newFile = new File([fileData], file.name, { type: file.type });
+      addClip(newFile);
     }
   };
 
