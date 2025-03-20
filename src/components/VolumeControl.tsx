@@ -13,18 +13,14 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ volume, onVolumeChange })
 
   return (
     <div className="w-40 p-4">
-      <label className="text-sm text-gray-300 mr-2 mt-5"></label>
+      <label className="text-sm text-primary text mr-2 mt-5"></label>
       <input
         type="range"
         min="0"
         max="100"
         value={volume * 100}
         onChange={handleVolumeChange}
-        style={{
-          accentColor: '#3b82f6',
-          backgroundColor: '#333'
-        }}
-        className="w-full h-2 rounded-lg cursor-pointer"
+        className="w-full h-2 rounded-lg cursor-pointer accent-primary"
       />
     </div>
   );

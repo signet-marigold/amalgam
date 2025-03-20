@@ -16,12 +16,7 @@ const App: React.FC = () => {
 
   // Set dark mode on the entire document
   useEffect(() => {
-    document.body.classList.add('dark');
     document.body.classList.remove('preload-style'); // Remove init styles
-
-    return () => {
-      //document.documentElement.classList.remove('dark');
-    };
   }, []);
 
   // Initialize FFmpeg
@@ -63,7 +58,7 @@ const App: React.FC = () => {
   if (isFFmpegLoading) {
     return (
       <div className="flex items-center justify-center text-xl min-h-screen">
-        <p>Loading ...</p>
+        <p className="text-xl">Loading ...</p>
       </div>
     );
   }
@@ -81,14 +76,10 @@ const App: React.FC = () => {
             <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
           </div>
           
-          <div className="mt-4 flex flex-col items-center justify-center w-full">
+          <div className="mt-4 flex flex-col items-center justify-center w-full bg-skin-muted">
             <Button
               onClick={handlePlayPause}
-              style={{
-                backgroundColor: '#1a1a1a',
-                borderColor: '#333',
-                color: 'white'
-              }}
+              className="bg-base border-border text-foreground"
             >
               {playing ? "Pause" : "Play"}
             </Button>
