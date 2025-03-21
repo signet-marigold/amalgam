@@ -62,9 +62,46 @@ html, body {
     @apply text-white;
     @apply py-2;
     @apply px-4;
-    @apply rounded;
+    @apply rounded-lg;
     @apply border-solid;
     @apply border-1;
-    @apply border-black/20;
+    @apply border-white/20;
+    @apply dark:border-black/20;
+  }
+
+  .button-small {
+    @apply rounded;
+    @apply py-2;
+    @apply px-4;
+  }
+
+  label {
+    @apply block;
+    @apply mb-2;
+    @apply text-sm;
+    @apply font-medium;
+    @apply text-gray-900;
+    @apply dark:text-white;
+  }
+
+  select {
+    @apply bg-gray-50;
+    @apply border;
+    @apply border-gray-300;
+    @apply text-gray-900;
+    @apply text-sm;
+    @apply rounded-lg;
+    @apply focus:ring-blue-500;
+    @apply focus:border-blue-500;
+    @apply py-3.5;
+    @apply px-4;
+    @variant dark {
+      @apply bg-gray-700;
+      @apply border-gray-600;
+      @apply placeholder-gray-400;
+      @apply text-white;
+      @apply focus:ring-blue-500;
+      @apply focus:border-blue-500;
+    }
   }
 }
