@@ -69,10 +69,12 @@ const App: React.FC = () => {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
       />
+
+      <div className="w-full flex justify-center">
       
       {videoUrl && (
         <>
-          <div className="w-full flex justify-center">
+          <div className="">
             <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
           </div>
           <div className="flex flex-col items-center justify-center w-full space-y-4">
@@ -86,6 +88,25 @@ const App: React.FC = () => {
           </div>
         </>
       )}
+
+      {videoUrl && (
+        <>
+          <div className="flex flex-col items-center justify-center w-full">
+            <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
+          </div>
+          <div className="flex flex-col items-center justify-center w-full space-y-4">
+            <button
+              onClick={handlePlayPause}
+              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+            <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
+          </div>
+        </>
+      )}
+
+      </div>
     </>
   );
 };
