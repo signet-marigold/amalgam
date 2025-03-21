@@ -1,3 +1,70 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary:            #54c258;
+  --color-primary-hover:      #70d474;
+  --color-secondary:          #56b4ff;
+  --color-secondary-hover:    #6bb4ee;
+  --color-background:         #e6e6e6;
+  --color-background-muted:   #d7d7d7;
+  --color-foreground:         #0f0f0f;
+  --color-foreground-muted:   #5e5e5e;
+  --color-border:             #c5c5c5;
+  --color-track:              #dcdcdc;
+  --color-track-header:       #e6e6e6;
+  --color-clip-video:         #56b4ff;
+  --color-clip-audio:         #54c258;
+  --color-timeline:           #ebebeb;
+  --color-playhead:           #ff4a30;
+  --color-ruler:              #c5c5c5;
+  --color-ruler-text:         #5e5e5e;
+}
+
+@layer base {
+  @variant dark {
+    --color-primary:          #4CAF50;
+    --color-primary-hover:    #148219;
+    --color-secondary:        #2196F3;
+    --color-secondary-hover:  #2874b1;
+    --color-background:       #1a1a1a;
+    --color-background-muted: #2a2a2a;
+    --color-foreground:       #f0f0f0;
+    --color-foreground-muted: #a0a0a0;
+    --color-border:           #3a3a3a;
+    --color-track:            #232323;
+    --color-track-header:     #1a1a1a;
+    --color-clip-video:       #2196F3;
+    --color-clip-audio:       #4CAF50;
+    --color-timeline:         #141414;
+    --color-playhead:         #ff3d00;
+    --color-ruler:            #3a3a3a;
+    --color-ruler-text:       #a0a0a0;
+  }
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+  @apply text-foreground;
+  @apply bg-background;
+}
+
+@layer components {
+  button {
+    @apply bg-primary;
+    @apply hover:bg-primary-hover;
+    @apply text-white;
+    @apply py-2;
+    @apply px-4;
+    @apply rounded;
+    @apply border-solid;
+    @apply border-1;
+    @apply border-black/20;
+  }
+}
