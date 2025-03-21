@@ -14,7 +14,6 @@ import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
 
-
 const App: React.FC = () => {
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
 
@@ -88,17 +87,12 @@ const App: React.FC = () => {
         <FileInput onFileChange={onFileChange} />
       </div>
 
-      <input type="file" id="file-input" accept="video/*,audio/*" multiple/>
-
       <div id="loading-indicator" className="loading-indicator hidden">
         <div className="spinner"></div>
         <p>Processing...</p>
       </div>
 
       <ErrorNotification/>
-
-
-
 
       <div className="w-full flex justify-center">
       
