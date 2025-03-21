@@ -1,223 +1,227 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Timeline as TimelineClass } from '../timeline/timeline';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Timeline } from '../timeline/timeline';
 import { Track, TrackType } from '../timeline/track';
 import { debug } from '../utils/debug';
+import { Clip } from '../timeline/clip';
+import { formatTime } from '../utils/timeUtils';
+import '../styles/timeline.css';
 
 interface TimelineProps {
-  timeline: TimelineClass;
+  timeline: Timeline;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ timeline }) => {
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1.0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
+const TimelineComponent: React.FC<TimelineProps> = ({ timeline }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rulerRef = useRef<HTMLDivElement>(null);
+  const tracksRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [selectedClip, setSelectedClip] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartTime, setDragStartTime] = useState(0);
+  const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
-    if (!timelineRef.current) return;
+    if (!containerRef.current || !rulerRef.current || !tracksRef.current) return;
 
-    const timelineElement = timelineRef.current;
-    const tracksContainer = timelineElement.querySelector('.tracks-container');
-    const ruler = timelineElement.querySelector('.timeline-ruler');
+    // Initialize timeline with DOM elements
+    timeline.initialize(
+      containerRef.current,
+      rulerRef.current,
+      tracksRef.current
+    );
 
-    if (!tracksContainer || !ruler) return;
-
-    // Initialize timeline
-    timeline.initialize(timelineElement);
-
-    // Handle timeline events
-    const handleTimeUpdate = (e: CustomEvent) => {
-      const time = e.detail.time;
-      updatePlayheadPosition(time);
-      updateTimeDisplay(time);
-    };
-
-    const handleScaleChange = (e: CustomEvent) => {
-      setScale(e.detail.scale);
-    };
-
-    // Handle keyboard shortcuts
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only respond if we're not in an input field
-      if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-        return;
-      }
-
-      switch (e.key) {
-        case ' ':
-          // Space: toggle play/pause
-          e.preventDefault();
-          if (timeline.isPlaying) {
-            timeline.stopPlayback();
-          } else {
-            timeline.startPlayback();
-          }
-          break;
-        case 'ArrowLeft':
-          // Left arrow: move back one frame
-          e.preventDefault();
-          timeline.currentTime = Math.max(0, timeline.currentTime - (1/30));
-          break;
-        case 'ArrowRight':
-          // Right arrow: move forward one frame
-          e.preventDefault();
-          timeline.currentTime = Math.min(timeline.duration, timeline.currentTime + (1/30));
-          break;
-        case 'Home':
-          // Home: go to beginning
-          e.preventDefault();
-          timeline.currentTime = 0;
-          break;
-        case 'End':
-          // End: go to end
-          e.preventDefault();
-          timeline.currentTime = timeline.duration;
-          break;
-        case 'S':
-          // S: split clip at playhead
-          e.preventDefault();
-          timeline.splitClipAtPlayhead();
-          break;
+    const handleScroll = () => {
+      if (rulerRef.current && tracksRef.current) {
+        rulerRef.current.scrollLeft = tracksRef.current.scrollLeft;
       }
     };
 
-    timelineElement.addEventListener('timeupdate', handleTimeUpdate as EventListener);
-    timelineElement.addEventListener('scalechange', handleScaleChange as EventListener);
-    document.addEventListener('keydown', handleKeyDown);
-
-    // Cleanup
+    tracksRef.current.addEventListener('scroll', handleScroll);
     return () => {
-      timelineElement.removeEventListener('timeupdate', handleTimeUpdate as EventListener);
-      timelineElement.removeEventListener('scalechange', handleScaleChange as EventListener);
-      document.removeEventListener('keydown', handleKeyDown);
+      if (tracksRef.current) {
+        tracksRef.current.removeEventListener('scroll', handleScroll);
+      }
     };
   }, [timeline]);
 
-  const updatePlayheadPosition = (time: number) => {
-    if (!timelineRef.current) return;
+  // Handle timeline time updates
+  useEffect(() => {
+    const handleTimeUpdate = (data: { time: number }) => {
+      setCurrentTime(data.time);
+    };
 
-    const playhead = timelineRef.current.querySelector('.playhead');
-    if (!playhead) return;
+    timeline.on('timeupdate', handleTimeUpdate);
+    return () => {
+      timeline.off('timeupdate', handleTimeUpdate);
+    };
+  }, [timeline]);
 
-    const position = time * scale * 100; // Convert time to pixels
-    (playhead as HTMLElement).style.left = `${position}px`;
-  };
-
-  const updateTimeDisplay = (time: number) => {
-    if (!timelineRef.current) return;
-
-    const timeDisplay = timelineRef.current.querySelector('.time-display');
-    if (!timeDisplay) return;
-
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-
-    timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!timelineRef.current) return;
-
-    // Check if clicking on a clip
-    const target = e.target as HTMLElement;
-    const clipElement = target.closest('.clip') as HTMLElement;
-    
-    if (clipElement) {
-      const clipId = clipElement.dataset.clipId;
-      if (clipId) {
-        setSelectedClip(clipId);
-      }
+  // Handle zoom changes
+  const handleZoom = useCallback((delta: number) => {
+    if (delta > 0) {
+      timeline.zoomIn();
+    } else {
+      timeline.zoomOut();
     }
+  }, [timeline]);
 
-    setIsDragging(true);
-    setStartX(e.pageX - timelineRef.current.offsetLeft);
-    setScrollLeft(timelineRef.current.scrollLeft);
+  // Handle scroll
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollLeft(e.currentTarget.scrollLeft);
+  }, []);
+
+  // Handle clip drag start
+  const handleClipDragStart = (e: React.DragEvent, clip: Clip) => {
+    e.dataTransfer.setData('text/plain', clip.id);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !timelineRef.current) return;
-
+  // Handle clip drag over
+  const handleClipDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    const x = e.pageX - timelineRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    timelineRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  const handleMouseUp = () => {
+  // Handle clip drop
+  const handleClipDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const clipId = e.dataTransfer.getData('text/plain');
+    const clip = timeline.getClip(clipId);
+    if (!clip) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const time = timeline.pixelsToTime(x);
+    
+    timeline.moveClip(clip.id, time, clip.trackId);
+  };
+
+  // Handle clip drag
+  const handleClipDrag = useCallback((e: React.DragEvent) => {
+    if (!isDragging || !draggedClipId) return;
+
+    const deltaX = e.clientX - dragStartX;
+    const deltaTime = deltaX / (zoom * 100); // Convert pixels to time
+    const newTime = dragStartTime + deltaTime;
+
+    timeline.updateClipTime(draggedClipId, newTime);
+  }, [isDragging, draggedClipId, dragStartX, dragStartTime, zoom, timeline]);
+
+  // Handle clip drag end
+  const handleClipDragEnd = useCallback(() => {
     setIsDragging(false);
-    setSelectedClip(null);
+    setDraggedClipId(null);
+  }, []);
+
+  // Handle clip resize start
+  const handleClipResizeStart = (e: React.MouseEvent, clip: Clip, isLeft: boolean) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startTime = isLeft ? clip.startTime : clip.endTime;
+    const startWidth = clip.endTime - clip.startTime;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const deltaTime = timeline.pixelsToTime(deltaX);
+      const newTime = startTime + deltaTime;
+
+      if (isLeft) {
+        timeline.resizeClip(clip.id, newTime, clip.endTime, clip.trackId);
+      } else {
+        timeline.resizeClip(clip.id, clip.startTime, newTime, clip.trackId);
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      const newScale = Math.max(0.1, Math.min(10, scale * delta));
-      setScale(newScale);
-      timeline.setScale(newScale);
+  // Render time markers
+  const renderTimeMarkers = useCallback(() => {
+    const duration = timeline.duration;
+    const markers = [];
+    const interval = Math.max(1, Math.floor(10 / zoom)); // Adjust interval based on zoom
+
+    for (let time = 0; time <= duration; time += interval) {
+      const x = time * zoom * 100;
+      markers.push(
+        <div
+          key={time}
+          className="absolute h-full border-l border-gray-300"
+          style={{ left: `${x}px` }}
+        >
+          <div className="absolute -top-6 left-0 text-xs text-gray-500">
+            {formatTime(time)}
+          </div>
+        </div>
+      );
     }
-  };
+
+    return markers;
+  }, [timeline.duration, zoom]);
 
   return (
-    <div 
-      ref={timelineRef}
-      className="timeline-container"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
-    >
-      <div className="timeline-ruler">
-        {/* Ruler marks will be added dynamically */}
+    <div className="timeline-container" ref={containerRef}>
+      <div className="timeline-ruler" ref={rulerRef}>
+        <div className="relative h-6 bg-gray-100">
+          {renderTimeMarkers()}
+        </div>
       </div>
-      <div className="tracks-container">
-        {/* Track elements will be added dynamically */}
+      <div className="tracks-container" ref={tracksRef}>
+        {timeline.tracks.map(track => (
+          <div
+            key={track.id}
+            className="track"
+            onDragOver={handleClipDragOver}
+            onDrop={handleClipDrop}
+          >
+            {track.clips.map(clip => (
+              <div
+                key={clip.id}
+                className="clip"
+                style={{
+                  left: `${timeline.timeToPixels(clip.startTime)}px`,
+                  width: `${timeline.timeToPixels(clip.endTime - clip.startTime)}px`,
+                }}
+                draggable
+                onDragStart={(e) => handleClipDragStart(e, clip)}
+              >
+                <div className="clip-content">
+                  <div className="clip-name">{clip.name}</div>
+                  <div className="clip-duration">
+                    {formatTime(clip.endTime - clip.startTime)}
+                  </div>
+                </div>
+                <div
+                  className="resize-handle left"
+                  onMouseDown={(e) => handleClipResizeStart(e, clip, true)}
+                />
+                <div
+                  className="resize-handle right"
+                  onMouseDown={(e) => handleClipResizeStart(e, clip, false)}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
-      <div className="playhead" />
-      <div className="time-display">00:00:00</div>
-      <div className="timeline-controls">
-        <button 
-          className="timeline-btn"
-          onClick={() => timeline.currentTime = Math.max(0, timeline.currentTime - 5)}
-          title="Skip back 5 seconds"
-        >
-          ⏪
-        </button>
-        <button 
-          className="timeline-btn"
-          onClick={() => timeline.currentTime = Math.max(0, timeline.currentTime - (1/30))}
-          title="Previous frame"
-        >
-          ◀
-        </button>
-        <button 
-          className="timeline-btn"
-          onClick={() => timeline.currentTime = Math.min(timeline.duration, timeline.currentTime + (1/30))}
-          title="Next frame"
-        >
-          ▶
-        </button>
-        <button 
-          className="timeline-btn"
-          onClick={() => timeline.currentTime = Math.min(timeline.duration, timeline.currentTime + 5)}
-          title="Skip forward 5 seconds"
-        >
-          ⏩
-        </button>
-        <button 
-          className="timeline-btn"
-          onClick={() => timeline.splitClipAtPlayhead()}
-          title="Split clip at playhead (S)"
-        >
-          ✂
-        </button>
+      <div
+        className="playhead"
+        style={{
+          left: `${timeline.timeToPixels(timeline.currentTime)}px`,
+        }}
+      />
+      <div className="zoom-controls">
+        <button onClick={() => handleZoom(1)}>+</button>
+        <button onClick={() => handleZoom(-1)}>-</button>
       </div>
     </div>
   );
 };
 
-export default Timeline;
+export default TimelineComponent;

@@ -14,47 +14,23 @@ export interface TrackProps {
 }
 
 export class Track {
-  private _id: string;
-  private _name: string;
-  private _type: TrackType;
-  private _index: number;
+  id: string;
+  name: string;
+  type: TrackType;
+  index: number;
   private _clips: Clip[] = [];
   private _isMuted: boolean = false;
   private _isSolo: boolean = false;
   private _isLocked: boolean = false;
   private _element: HTMLElement | null = null;
 
-  constructor(props: TrackProps) {
-    this._id = props.id;
-    this._name = props.name;
-    this._type = props.type;
-    this._index = props.index;
+  constructor(type: TrackType, index: number = 0) {
+    this.id = `${type.toLowerCase()}-track-${index + 1}`;
+    this.name = `${type} ${index + 1}`;
+    this.type = type;
+    this.index = index;
 
-    debug(`Created track: ${this._name} (${this._type})`);
-  }
-
-  get id(): string {
-    return this._id;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-
-  set name(value: string) {
-    this._name = value;
-  }
-
-  get type(): TrackType {
-    return this._type;
-  }
-
-  get index(): number {
-    return this._index;
-  }
-
-  set index(value: number) {
-    this._index = value;
+    debug(`Created track: ${this.name} (${this.type})`);
   }
 
   get clips(): Clip[] {
@@ -98,7 +74,7 @@ export class Track {
     this._clips.push(clip);
     this._clips.sort((a, b) => a.trackStartTime - b.trackStartTime);
 
-    debug(`Added clip "${clip.name}" to track "${this._name}"`);
+    debug(`Added clip "${clip.name}" to track "${this.name}"`);
   }
 
   // Remove a clip from this track
@@ -107,7 +83,7 @@ export class Track {
 
     if (index !== -1) {
       this._clips.splice(index, 1);
-      debug(`Removed clip with ID ${clipId} from track "${this._name}"`);
+      debug(`Removed clip with ID ${clipId} from track "${this.name}"`);
       return true;
     }
 

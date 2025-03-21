@@ -1,8 +1,10 @@
 import { Clip, VideoClip, AudioClip } from './clip';
 import { Track, TrackType } from './track';
 import { debug, error as logError } from '../utils/debug';
+import { EventEmitter } from './event-emitter';
+import { formatTime } from '../utils/timeUtils';
 
-export class Timeline {
+export class Timeline extends EventEmitter {
   private _tracks: Track[] = [];
   private _clips: Clip[] = [];
   private _duration: number = 0;
@@ -20,29 +22,54 @@ export class Timeline {
   private _timelineStartTime: number = 0;
   private _animationFrameId: number | null = null;
   private _previewRenderer: any = null; // Reference to the preview renderer
+  private _pixelsPerSecond: number = 5.56; // 1000 pixels for 3 minutes (180 seconds)
 
   constructor() {
-    // Initialize empty timeline
+    super();
   }
 
-  public initialize(timelineElement: HTMLElement): void {
+  public initialize(
+    timelineElement: HTMLElement,
+    rulerElement: HTMLElement,
+    tracksContainer: HTMLElement
+  ): void {
     this._timelineElement = timelineElement;
-    
-    const tracksContainer = timelineElement.querySelector('.tracks-container') as HTMLElement;
-    const rulerElement = timelineElement.querySelector('.timeline-ruler') as HTMLElement;
-    const playheadElement = timelineElement.querySelector('.playhead') as HTMLElement;
+    this._rulerElement = rulerElement;
+    this._tracksContainer = tracksContainer;
 
-    if (!tracksContainer || !rulerElement || !playheadElement) {
-      throw new Error('Required timeline elements not found');
+    // Create default tracks if they don't exist yet
+    if (this._tracks.length === 0) {
+      // Create default video track
+      const videoTrack = new Track(TrackType.Video);
+      videoTrack.id = 'video-track-1';
+      videoTrack.name = 'Video 1';
+      videoTrack.index = 0;
+      this._tracks.push(videoTrack);
+
+      // Create default audio track
+      const audioTrack = new Track(TrackType.Audio);
+      audioTrack.id = 'audio-track-1';
+      audioTrack.name = 'Audio 1';
+      audioTrack.index = 1;
+      this._tracks.push(audioTrack);
     }
 
-    this._tracksContainer = tracksContainer;
-    this._rulerElement = rulerElement;
-    this._playheadElement = playheadElement;
+    // Create track elements in the DOM
+    this._tracks.forEach(track => {
+      debug('Created track:', track.name, `(${track.type})`);
+      this.createTrackElement(track);
+    });
 
-    this.setupEventListeners();
+    // Create playhead element
+    this._playheadElement = document.createElement('div');
+    this._playheadElement.className = 'playhead';
+    this._timelineElement.appendChild(this._playheadElement);
+
+    // Draw initial ruler
     this.drawRuler();
-    this.createTrackElements();
+
+    // Set up event listeners
+    this.setupEventListeners();
   }
 
   public setScale(newScale: number): void {
@@ -70,14 +97,7 @@ export class Timeline {
   set currentTime(value: number) {
     this._currentTime = Math.max(0, Math.min(this._duration, value));
     this.updatePlayhead();
-
-    // Dispatch time update event
-    if (this._timelineElement) {
-      const event = new CustomEvent('timeupdate', {
-        detail: { time: this._currentTime }
-      });
-      this._timelineElement.dispatchEvent(event);
-    }
+    this.emit('timeupdate', { time: this._currentTime });
   }
 
   get duration(): number {
@@ -154,9 +174,9 @@ export class Timeline {
         const clipId = clipElement.dataset.clipId;
         const clip = this._clips.find(c => c.id === clipId);
         if (clip) {
-          this._isDragging = true;
+        this._isDragging = true;
           this._draggedClip = clip;
-          this._lastMouseX = e.clientX;
+        this._lastMouseX = e.clientX;
         }
       }
     });
@@ -165,11 +185,11 @@ export class Timeline {
       if (!this._isDragging || !this._draggedClip || !this._timelineElement) return;
 
       const rect = this._timelineElement.getBoundingClientRect();
-      const deltaX = e.clientX - this._lastMouseX;
+        const deltaX = e.clientX - this._lastMouseX;
       const deltaTime = this.pixelsToTime(deltaX);
 
       this._draggedClip.trackStartTime += deltaTime;
-      this._lastMouseX = e.clientX;
+        this._lastMouseX = e.clientX;
 
       this.updateClipPosition(this._draggedClip);
     });
@@ -223,205 +243,134 @@ export class Timeline {
     clipElement.style.left = `${x}px`;
   }
 
-  addClip(clip: Clip): void {
-    debug('Adding clip to timeline:', clip.name);
+  addTrack(track: Track): void {
+    this._tracks.push(track);
+    this.emit('trackadded', { track });
+  }
 
-    // Find appropriate track for the clip
-    let track: Track | undefined;
+  removeTrack(trackId: string): void {
+    const trackIndex = this._tracks.findIndex(t => t.id === trackId);
+    if (trackIndex === -1) return;
 
-    if (clip instanceof VideoClip) {
-      track = this._tracks.find(t => t.type === TrackType.Video && !this.isTrackOccupiedAt(t, clip.trackStartTime, clip.duration));
-    } else if (clip instanceof AudioClip) {
-      track = this._tracks.find(t => t.type === TrackType.Audio && !this.isTrackOccupiedAt(t, clip.trackStartTime, clip.duration));
+    // Remove all clips from this track
+    this._clips = this._clips.filter(clip => clip.trackId !== trackId);
+    
+    // Remove the track
+    this._tracks.splice(trackIndex, 1);
+    
+    this.emit('trackremoved', { trackId });
+  }
+
+  public addClip(clip: Clip): void {
+    // Find the first available track
+    let targetTrack = this._tracks.find(t => t.type === clip.type);
+    if (!targetTrack) {
+      // Create a new track if none exists for this clip type
+      const newTrack = new Track(clip.type);
+      newTrack.id = `${clip.type.toLowerCase()}-track-${this._tracks.length + 1}`;
+      newTrack.name = `${clip.type} ${this._tracks.length + 1}`;
+      newTrack.index = this._tracks.length;
+      this.addTrack(newTrack);
+      clip.trackId = newTrack.id;
+      targetTrack = newTrack;
+    } else {
+      clip.trackId = targetTrack.id;
     }
 
-    // If no suitable track found, create a new one
-    if (!track) {
-      const trackType = clip instanceof VideoClip ? TrackType.Video : TrackType.Audio;
-      const tracksOfType = this._tracks.filter(t => t.type === trackType);
-
-      track = new Track({
-        id: `${trackType.toLowerCase()}-track-${tracksOfType.length + 1}`,
-        name: `${trackType} ${tracksOfType.length + 1}`,
-        type: trackType,
-        index: this._tracks.length
-      });
-
-      this._tracks.push(track);
-      this.createTrackElement(track);
-    }
-
-    // Add clip to track
-    track.addClip(clip);
     this._clips.push(clip);
-
+    this._updateDuration();
+    this.emit('clipadded', { clip });
+    
     // Create the clip element in the DOM
-    this.createClipElement(clip, track);
-
-    // Update timeline duration if needed
-    const clipEndTime = clip.trackStartTime + clip.duration;
-    if (clipEndTime > this._duration) {
-      this._duration = clipEndTime;
-      this.drawRuler(); // Update the ruler if duration changed
+    if (targetTrack) {
+      this.createClipElement(clip, targetTrack);
     }
   }
 
   removeClip(clipId: string): void {
     const clipIndex = this._clips.findIndex(c => c.id === clipId);
+    if (clipIndex === -1) return;
 
-    if (clipIndex !== -1) {
       const clip = this._clips[clipIndex];
-
-      // Clean up video element in preview renderer if it exists
-      if (this._previewRenderer) {
-        this._previewRenderer.cleanupVideoElement(clipId);
-      }
-
-      // Remove clip from its track
-      const track = this._tracks.find(t => t.clips.some(c => c.id === clipId));
-      if (track) {
-        track.removeClip(clipId);
-      }
-
-      // Remove clip from the timeline
-      this._clips.splice(clipIndex, 1);
-
-      // Remove clip element from DOM
-      const clipElement = document.querySelector(`[data-clip-id="${clipId}"]`);
-      if (clipElement) {
-        clipElement.remove();
-      }
-
-      // Dispatch clipremoved event
-      if (this._timelineElement) {
-        const event = new CustomEvent('clipremoved', {
-          detail: { clipId }
-        });
-        this._timelineElement.dispatchEvent(event);
-      }
-
-      // Update timeline duration if needed
-      this.recalculateDuration();
-    }
+    this._clips.splice(clipIndex, 1);
+    this._updateDuration();
+    this.emit('clipremoved', { clipId });
   }
 
-  splitClipAtPlayhead(): void {
-    const currentTime = this._currentTime;
+  updateClipTime(clipId: string, newTime: number): void {
+    const clip = this._clips.find(c => c.id === clipId);
+    if (!clip) return;
 
-    // Find clips that are currently active at the playhead position
-    const clipsAtPlayhead = this._clips.filter(clip => {
-      const clipStart = clip.trackStartTime;
-      const clipEnd = clipStart + clip.duration;
-      return currentTime > clipStart && currentTime < clipEnd;
-    });
+    clip.trackStartTime = Math.max(0, newTime);
+    this._updateDuration();
+    this.emit('clipmoved', { clipId, newTime });
+  }
 
-    for (const clip of clipsAtPlayhead) {
-      debug(`Splitting clip ${clip.id} at ${currentTime}`);
+  updateClipDuration(clipId: string, newDuration: number): void {
+    const clip = this._clips.find(c => c.id === clipId);
+    if (!clip) return;
 
-      // Calculate relative position within the clip
-      const relativePosition = currentTime - clip.trackStartTime;
+    clip.duration = Math.max(0.1, newDuration);
+    this._updateDuration();
+    this.emit('clipresized', { clipId, newDuration });
+  }
 
-      // Create two new clips from the original
-      const splitPoint = clip.startTime + relativePosition;
+  startPlayback(): void {
+    if (this._isPlaying) return;
+    
+    this._isPlaying = true;
+    this._playbackStartTime = performance.now() - (this._currentTime * 1000);
+    this.emit('playbackstarted', { time: this._currentTime });
+  }
 
-      if (clip instanceof VideoClip) {
-        // First part (before split)
-        const firstClip = new VideoClip({
-          id: `${clip.id}-part1`,
-          name: `${clip.name} (Part 1)`,
-          source: clip.source,
-          sourceFile: clip.sourceFile,
-          startTime: clip.startTime,
-          endTime: splitPoint,
-          trackStartTime: clip.trackStartTime,
-          width: clip.width,
-          height: clip.height,
-          hasAudio: clip.hasAudio
-        });
+  stopPlayback(): void {
+    if (!this._isPlaying) return;
+    
+    this._isPlaying = false;
+    this.emit('playbackstopped', { time: this._currentTime });
+  }
 
-        // Second part (after split)
-        const secondClip = new VideoClip({
-          id: `${clip.id}-part2`,
-          name: `${clip.name} (Part 2)`,
-          source: clip.source,
-          sourceFile: clip.sourceFile,
-          startTime: splitPoint,
-          endTime: clip.endTime,
-          trackStartTime: currentTime,
-          width: clip.width,
-          height: clip.height,
-          hasAudio: clip.hasAudio
-        });
-
-        // Remove the original clip
-        this.removeClip(clip.id);
-
-        // Add the new clips
-        this.addClip(firstClip);
-        this.addClip(secondClip);
-
-      } else if (clip instanceof AudioClip) {
-        // First part (before split)
-        const firstClip = new AudioClip({
-          id: `${clip.id}-part1`,
-          name: `${clip.name} (Part 1)`,
-          source: clip.source,
-          sourceFile: clip.sourceFile,
-          startTime: clip.startTime,
-          endTime: splitPoint,
-          trackStartTime: clip.trackStartTime,
-          linkedClipId: clip.linkedClipId
-        });
-
-        // Second part (after split)
-        const secondClip = new AudioClip({
-          id: `${clip.id}-part2`,
-          name: `${clip.name} (Part 2)`,
-          source: clip.source,
-          sourceFile: clip.sourceFile,
-          startTime: splitPoint,
-          endTime: clip.endTime,
-          trackStartTime: currentTime,
-          linkedClipId: clip.linkedClipId
-        });
-
-        // Remove the original clip
-        this.removeClip(clip.id);
-
-        // Add the new clips
-        this.addClip(firstClip);
-        this.addClip(secondClip);
-      }
-    }
+  private _updateDuration(): void {
+    this._duration = Math.max(
+      ...this._clips.map(clip => clip.trackStartTime + clip.duration)
+    );
+    this.emit('durationchanged', { duration: this._duration });
   }
 
   zoomIn(): void {
-    this._scale *= 1.2;
+    this._pixelsPerSecond *= 1.2;
     this.updateTimelineScale();
+    this.updateClipSizes();
   }
 
   zoomOut(): void {
-    this._scale /= 1.2;
+    this._pixelsPerSecond /= 1.2;
     this.updateTimelineScale();
+    this.updateClipSizes();
   }
 
   private updateTimelineScale(): void {
-    if (!this._timelineElement || !this._tracksContainer) return;
+    if (!this._tracksContainer || !this._rulerElement) return;
 
-    const scale = this._scale;
-    this._timelineElement.style.transform = `scaleX(${scale})`;
-    this._tracksContainer.style.transform = `scaleX(${scale})`;
+    // Update the width of the timeline based on duration and pixels per second
+    const totalWidth = this._duration * this._pixelsPerSecond;
+    this._tracksContainer.style.width = `${totalWidth}px`;
+    this._rulerElement.style.width = `${totalWidth}px`;
 
-    // Update ruler
-    this.drawRuler();
+    // Update clip positions and sizes
+    this.updateClipSizes();
+  }
 
-    // Update clip positions
+  private updateClipSizes(): void {
     this._clips.forEach(clip => {
-      this.updateClipElement(clip);
+      const clipElement = document.querySelector(`[data-clip-id="${clip.id}"]`);
+      if (clipElement instanceof HTMLElement) {
+        const start = this.timeToPixels(clip.startTime);
+        const width = this.timeToPixels(clip.endTime - clip.startTime);
+        clipElement.style.left = `${start}px`;
+        clipElement.style.width = `${width}px`;
+      }
     });
-
-    // Update playhead
-    this.updatePlayhead();
   }
 
   private isTrackOccupiedAt(track: Track, startTime: number, duration: number): boolean {
@@ -463,21 +412,17 @@ export class Timeline {
     // Create default tracks if they don't exist yet
     if (this._tracks.length === 0) {
       // Create default video track
-      const videoTrack = new Track({
-        id: 'video-track-1',
-        name: 'Video 1',
-        type: TrackType.Video,
-        index: 0
-      });
+      const videoTrack = new Track(TrackType.Video);
+      videoTrack.id = 'video-track-1';
+      videoTrack.name = 'Video 1';
+      videoTrack.index = 0;
       this._tracks.push(videoTrack);
 
       // Create default audio track
-      const audioTrack = new Track({
-        id: 'audio-track-1',
-        name: 'Audio 1',
-        type: TrackType.Audio,
-        index: 1
-      });
+      const audioTrack = new Track(TrackType.Audio);
+      audioTrack.id = 'audio-track-1';
+      audioTrack.name = 'Audio 1';
+      audioTrack.index = 1;
       this._tracks.push(audioTrack);
     }
 
@@ -632,82 +577,162 @@ export class Timeline {
     clipElement.setAttribute('data-clip-id', clip.id);
 
     // Position the clip
-    const clipStart = this.timeToPixel(clip.trackStartTime);
-    const clipWidth = this.timeToPixel(clip.duration);
+    const clipStart = this.timeToPixels(clip.startTime);
+    const clipWidth = this.timeToPixels(clip.endTime - clip.startTime);
 
     clipElement.style.left = `${clipStart}px`;
     clipElement.style.width = `${clipWidth}px`;
 
     // Clip content
-    let clipContent = '';
+    const clipContent = document.createElement('div');
+    clipContent.className = 'clip-content';
 
-    if (clip instanceof VideoClip) {
-      // For video clips, we'll show a thumbnail and name
-      clipContent = `
-        <div class="clip-thumbnail">
-          <img src="${clip.source}" alt="${clip.name}" />
-        </div>
-        <div class="clip-name">${clip.name}</div>
-      `;
-    } else if (clip instanceof AudioClip) {
-      // For audio clips, we'll show a waveform and name
-      clipContent = `
-        <div class="clip-waveform">
-          <div class="waveform-container"></div>
-        </div>
-        <div class="clip-name">${clip.name}</div>
-      `;
-    }
+    // Add clip name
+    const nameElement = document.createElement('div');
+    nameElement.className = 'clip-name';
+    nameElement.textContent = clip.name;
+    clipContent.appendChild(nameElement);
 
-    clipElement.innerHTML = clipContent;
+    // Add duration
+    const durationElement = document.createElement('div');
+    durationElement.className = 'clip-duration';
+    durationElement.textContent = formatTime(clip.endTime - clip.startTime);
+    clipContent.appendChild(durationElement);
+
+    // Add resize handles
+    const leftHandle = document.createElement('div');
+    leftHandle.className = 'resize-handle left';
+    leftHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this.handleClipResize(clip, true, e);
+    });
+
+    const rightHandle = document.createElement('div');
+    rightHandle.className = 'resize-handle right';
+    rightHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this.handleClipResize(clip, false, e);
+    });
+
+    // Add drag functionality
+    clipElement.draggable = true;
+    clipElement.addEventListener('dragstart', (e) => {
+      e.dataTransfer?.setData('text/plain', clip.id);
+    });
+
+    // Assemble the clip element
+    clipElement.appendChild(clipContent);
+    clipElement.appendChild(leftHandle);
+    clipElement.appendChild(rightHandle);
     trackContent.appendChild(clipElement);
+  }
+
+  private handleClipResize(clip: Clip, isLeft: boolean, e: MouseEvent): void {
+    const startX = e.clientX;
+    const startTime = isLeft ? clip.startTime : clip.endTime;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const deltaTime = this.pixelsToTime(deltaX);
+      const newTime = startTime + deltaTime;
+
+      if (isLeft) {
+        this.resizeClip(clip.id, newTime, clip.endTime, clip.trackId);
+      } else {
+        this.resizeClip(clip.id, clip.startTime, newTime, clip.trackId);
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   }
 
   private drawRuler(): void {
     if (!this._rulerElement) return;
 
-    const rulerWidth = this._rulerElement.clientWidth;
-    const majorTickInterval = 1; // 1 second
-    const minorTickInterval = 0.25; // 0.25 seconds
-    const pixelsPerSecond = rulerWidth / this._duration;
-    const majorTickWidth = 2;
-    const minorTickWidth = 1;
-    const tickHeight = 20;
-
     // Clear previous ruler content
     this._rulerElement.innerHTML = '';
 
-    // Draw major ticks (seconds)
-    for (let time = 0; time <= this._duration; time += majorTickInterval) {
-      const x = (time / this._duration) * rulerWidth;
-      const tick = document.createElement('div');
-      tick.className = 'ruler-tick major';
-      tick.style.left = `${x}px`;
-      tick.style.width = `${majorTickWidth}px`;
-      tick.style.height = `${tickHeight}px`;
-      this._rulerElement.appendChild(tick);
+    // Create a container for ticks
+    const ticksContainer = document.createElement('div');
+    ticksContainer.className = 'ruler-ticks';
+    this._rulerElement.appendChild(ticksContainer);
 
-      // Add time label
-      const label = document.createElement('div');
-      label.className = 'ruler-label';
-      label.textContent = time.toFixed(0);
-      label.style.left = `${x - 10}px`;
-      label.style.top = `${tickHeight + 2}px`;
-      this._rulerElement.appendChild(label);
-    }
+    // Function to update ticks based on container width
+    const updateTicks = () => {
+      const containerWidth = this._rulerElement!.clientWidth;
+      const pixelsPerSecond = this._pixelsPerSecond * this._scale;
+      const visibleDuration = containerWidth / pixelsPerSecond;
+      
+      // Clear previous ticks
+      ticksContainer.innerHTML = '';
 
-    // Draw minor ticks (0.25 seconds)
-    for (let time = 0; time <= this._duration; time += minorTickInterval) {
-      if (time % majorTickInterval !== 0) {
-        const x = (time / this._duration) * rulerWidth;
+      const majorTickInterval = 5; // 5 seconds
+      const minorTickInterval = 1; // 1 second
+      const subMinorTickInterval = 0.25; // 0.25 seconds
+      const majorTickHeight = 20;
+      const minorTickHeight = 15;
+      const subMinorTickHeight = 10;
+
+      // Draw major ticks (5 seconds)
+      for (let time = 0; time <= visibleDuration; time += majorTickInterval) {
+        const x = time * pixelsPerSecond;
         const tick = document.createElement('div');
-        tick.className = 'ruler-tick minor';
+        tick.className = 'ruler-tick major';
         tick.style.left = `${x}px`;
-        tick.style.width = `${minorTickWidth}px`;
-        tick.style.height = `${tickHeight / 2}px`;
-        this._rulerElement.appendChild(tick);
+        tick.style.height = `${majorTickHeight}px`;
+        ticksContainer.appendChild(tick);
+
+        // Add time label
+        const label = document.createElement('div');
+        label.className = 'ruler-label';
+        label.textContent = formatTime(time);
+        label.style.left = `${x}px`;
+        ticksContainer.appendChild(label);
       }
-    }
+
+      // Draw minor ticks (1 second)
+      for (let time = 0; time <= visibleDuration; time += minorTickInterval) {
+        if (time % majorTickInterval !== 0) {
+          const x = time * pixelsPerSecond;
+          const tick = document.createElement('div');
+          tick.className = 'ruler-tick minor';
+          tick.style.left = `${x}px`;
+          tick.style.height = `${minorTickHeight}px`;
+          ticksContainer.appendChild(tick);
+        }
+      }
+
+      // Draw sub-minor ticks (0.25 seconds)
+      for (let time = 0; time <= visibleDuration; time += subMinorTickInterval) {
+        if (time % minorTickInterval !== 0) {
+          const x = time * pixelsPerSecond;
+          const tick = document.createElement('div');
+          tick.className = 'ruler-tick sub-minor';
+          tick.style.left = `${x}px`;
+          tick.style.height = `${subMinorTickHeight}px`;
+          ticksContainer.appendChild(tick);
+        }
+      }
+    };
+
+    // Initial update
+    updateTicks();
+
+    // Add resize observer to update ticks when container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      updateTicks();
+    });
+
+    resizeObserver.observe(this._rulerElement);
+
+    // Store the observer for cleanup
+    this._rulerElement.dataset.resizeObserver = resizeObserver.toString();
   }
 
   private updatePlayhead(): void {
@@ -717,36 +742,47 @@ export class Timeline {
     this._playheadElement.style.left = `${x}px`;
   }
 
-  private updateClipSizes(): void {
-    if (!this._tracksContainer) return;
-
-    this._clips.forEach(clip => {
-      const clipElement = this._tracksContainer!.querySelector(`[data-clip-id="${clip.id}"]`) as HTMLElement;
-      if (clipElement) {
-        const width = this.timeToPixel(clip.duration);
-        clipElement.style.width = `${width}px`;
-      }
-    });
-  }
-
   private updateClipElement(clip: Clip): void {
     if (!this._tracksContainer) return;
 
     const clipElement = this._tracksContainer.querySelector(`[data-clip-id="${clip.id}"]`) as HTMLElement;
     if (!clipElement) return;
 
-    const x = this.timeToPixel(clip.trackStartTime);
-    const width = this.timeToPixel(clip.duration);
+    const x = this.timeToPixels(clip.trackStartTime);
+    const width = this.timeToPixels(clip.duration);
 
     clipElement.style.left = `${x}px`;
     clipElement.style.width = `${width}px`;
   }
 
-  private pixelsToTime(pixels: number): number {
-    return this.pixelToTime(pixels);
+  public timeToPixels(time: number): number {
+    return time * this._pixelsPerSecond;
   }
 
-  private timeToPixels(time: number): number {
-    return this.timeToPixel(time);
+  public pixelsToTime(pixels: number): number {
+    return pixels / this._pixelsPerSecond;
+  }
+
+  public getClip(clipId: string): Clip | undefined {
+    return this.clips.find(clip => clip.id === clipId);
+  }
+
+  public moveClip(clipId: string, newStartTime: number, trackId: string): void {
+    const clip = this.getClip(clipId);
+    if (!clip) return;
+
+    const duration = clip.endTime - clip.startTime;
+    clip.startTime = newStartTime;
+    clip.endTime = newStartTime + duration;
+    clip.trackId = trackId;
+  }
+
+  public resizeClip(clipId: string, newStartTime: number, newEndTime: number, trackId: string): void {
+    const clip = this.getClip(clipId);
+    if (!clip) return;
+
+    clip.startTime = newStartTime;
+    clip.endTime = newEndTime;
+    clip.trackId = trackId;
   }
 }
