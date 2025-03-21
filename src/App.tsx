@@ -3,9 +3,17 @@ import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
 import ThemeToggleButton from "./components/ThemeToggleButton";
+import Toolbar from "./components/Toolbar";
+import PreviewPlate from "./components/PreviewPlate";
+import RenderPlate from "./components/RenderPlate";
+import ClipPool from "./components/ClipPool";
+import Timeline from "./components/Timeline";
+import ExportDialog from "./components/ExportDialog";
+import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
+
 
 const App: React.FC = () => {
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
@@ -59,16 +67,40 @@ const App: React.FC = () => {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-center">Amalgam</h1>
-      
+      <header className="w-full flex justify-between p-5">
+        <h1 className="text-2xl font-bold text-center">Browser Video Editor</h1>
+        <Toolbar/>
+        <ThemeToggleButton
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
+        />
+      </header>
+
+      <hr/>
+
+      <div className="editor-container">
+        <PreviewPlate/>
+        <ClipPool/>
+        <Timeline/>
+      </div>
+
+      <ExportDialog/>
+
       <div className="w-full flex justify-center">
         <FileInput onFileChange={onFileChange} />
       </div>
 
-       <ThemeToggleButton
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
+      <input type="file" id="file-input" accept="video/*,audio/*" multiple/>
+
+      <div id="loading-indicator" className="loading-indicator hidden">
+        <div className="spinner"></div>
+        <p>Processing...</p>
+      </div>
+
+      <ErrorNotification/>
+
+
+
 
       <div className="w-full flex justify-center">
       
