@@ -14,11 +14,11 @@ export const lightIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" vi
 const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ isDarkMode, toggleDarkMode}) => {
   return (
       <button
-        className="cursor-pointer w-12 h-5 rounded-full bg-gray-200 dark:bg-white focus:outline-none shadow"
+        className="cursor-pointer w-12 h-5 rounded-full bg-white dark:bg-white focus:outline-none shadow"
         onClick={toggleDarkMode}
       >
         <div
-          className={`w-8 h-8 -translate-y-3.5 relative rounded-full transition-all duration-400 transform ${
+          className={`w-8 h-8 -translate-y-1.5 relative rounded-full transition-all duration-400 transform ${
             isDarkMode
               ? 'bg-gray-700 translate-x-2'
               : 'bg-yellow-500 -translate-x-6'

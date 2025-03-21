@@ -67,16 +67,14 @@ const App: React.FC = () => {
 
   return (
     <>
-      <header className="w-full flex justify-between p-5">
-        <h1 className="text-2xl font-bold text-center">Browser Video Editor</h1>
+      <header className="w-full flex justify-between items-center px-5 py-2 border-solid border-b-1 border-bordercolor">
+        <h1 className="text-xl text-center">Browser Video Editor</h1>
         <Toolbar/>
         <ThemeToggleButton
           isDarkMode={isDarkMode}
           toggleDarkMode={toggleDarkMode}
         />
       </header>
-
-      <hr/>
 
       <div className="editor-container">
         <PreviewPlate/>

@@ -4,22 +4,24 @@
 
 @theme {
   --color-primary:            #54c258;
-  --color-primary-hover:      #70d474;
+  --color-primary-hover:      #65ae68;
   --color-secondary:          #56b4ff;
-  --color-secondary-hover:    #6bb4ee;
+  --color-secondary-hover:    #7cadd6;
+  --color-warning:            #b92c28;
+  --color-warning-hover:      #a32824;
   --color-background:         #e6e6e6;
   --color-background-muted:   #d7d7d7;
   --color-foreground:         #0f0f0f;
   --color-foreground-muted:   #5e5e5e;
-  --color-border:             #c5c5c5;
-  --color-track:              #dcdcdc;
-  --color-track-header:       #e6e6e6;
-  --color-clip-video:         #56b4ff;
-  --color-clip-audio:         #54c258;
-  --color-timeline:           #ebebeb;
-  --color-playhead:           #ff4a30;
-  --color-ruler:              #c5c5c5;
-  --color-ruler-text:         #5e5e5e;
+  --color-bordercolor:        #c5c5c5;
+  --color-trackcolor:         #dcdcdc;
+  --color-trackheadercolor:   #e6e6e6;
+  --color-clipvideocolor:     #56b4ff;
+  --color-clipaudiocolor:     #54c258;
+  --color-timelinecolor:      #ebebeb;
+  --color-playheadcolor:      #ff4a30;
+  --color-rulercolor:         #c5c5c5;
+  --color-rulertextcolor:     #5e5e5e;
 }
 
 @layer base {
@@ -28,19 +30,21 @@
     --color-primary-hover:    #148219;
     --color-secondary:        #2196F3;
     --color-secondary-hover:  #2874b1;
+    --color-warning:          #ad3a36;
+    --color-warning-hover:    #803735;
     --color-background:       #1a1a1a;
     --color-background-muted: #2a2a2a;
     --color-foreground:       #f0f0f0;
     --color-foreground-muted: #a0a0a0;
-    --color-border:           #3a3a3a;
-    --color-track:            #232323;
-    --color-track-header:     #1a1a1a;
-    --color-clip-video:       #2196F3;
-    --color-clip-audio:       #4CAF50;
-    --color-timeline:         #141414;
-    --color-playhead:         #ff3d00;
-    --color-ruler:            #3a3a3a;
-    --color-ruler-text:       #a0a0a0;
+    --color-bordercolor:      #3a3a3a;
+    --color-trackcolor:       #232323;
+    --color-trackheadercolor: #1a1a1a;
+    --color-clipvideocolor:   #2196F3;
+    --color-clipaudiocolor:   #4CAF50;
+    --color-timelinecolor:    #141414;
+    --color-playheadcolor:    #ff3d00;
+    --color-rulercolor:       #3a3a3a;
+    --color-rulertextcolor:   #a0a0a0;
   }
 }
 
@@ -57,22 +61,16 @@ html, body {
 
 @layer components {
   button {
-    @apply bg-primary;
-    @apply hover:bg-primary-hover;
-    @apply text-white;
-    @apply py-2;
+    @apply cursor-pointer;
+    @apply text-sm;
+    @apply h-9;
     @apply px-4;
-    @apply rounded-lg;
-    @apply border-solid;
-    @apply border-1;
-    @apply border-white/20;
-    @apply dark:border-black/20;
-  }
-
-  .button-small {
     @apply rounded;
-    @apply py-2;
-    @apply px-4;
+    @apply border;
+    @apply border-bordercolor;
+    @apply bg-background-muted;
+    @apply text-foreground;
+    @apply hover:bg-background;
   }
 
   label {
@@ -85,16 +83,17 @@ html, body {
   }
 
   select {
+    @apply cursor-pointer;
     @apply bg-gray-50;
     @apply border;
     @apply border-gray-300;
     @apply text-gray-900;
     @apply text-sm;
-    @apply rounded-lg;
     @apply focus:ring-blue-500;
     @apply focus:border-blue-500;
-    @apply py-3.5;
+    @apply h-9;
     @apply px-4;
+    @apply rounded;
     @variant dark {
       @apply bg-gray-700;
       @apply border-gray-600;

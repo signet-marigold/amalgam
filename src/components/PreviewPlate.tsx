@@ -3,12 +3,12 @@ interface PreviewPlateProps {
 
 const PreviewPlate: React.FC<PreviewPlateProps> = ({ }) => {
   return (
-    <section className="preview-container">
-      <div className="preview-wrapper">
-        <canvas id="preview-canvas"></canvas>
-        <div className="preview-controls">
-          <button id="play-pause-btn" className="btn icon">▶</button>
-          <div id="time-display" className="time-display">00:00:00 / 00:00:00</div>
+    <section>
+      <div className="flex justify-center items-center p-4">
+        <canvas id="preview-canvas" className="shadow border border-bordercolor rounded "></canvas>
+        <div className="">
+          <button id="play-pause-btn" className="">▶</button>
+          <div id="time-display" className="">00:00:00 / 00:00:00</div>
         </div>
       </div>
     </section>
