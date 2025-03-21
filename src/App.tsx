@@ -3,9 +3,17 @@ import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
 import ThemeToggleButton from "./components/ThemeToggleButton";
+import Toolbar from "./components/Toolbar";
+import PreviewPlate from "./components/PreviewPlate";
+import RenderPlate from "./components/RenderPlate";
+import ClipPool from "./components/ClipPool";
+import Timeline from "./components/Timeline";
+import ExportDialog from "./components/ExportDialog";
+import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
+
 
 const App: React.FC = () => {
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
@@ -59,20 +67,44 @@ const App: React.FC = () => {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-center">Amalgam</h1>
-      
+      <header className="w-full flex justify-between items-center px-5 py-2 border-solid border-b-1 border-bordercolor">
+        <h1 className="text-xl text-center">Browser Video Editor</h1>
+        <Toolbar/>
+        <ThemeToggleButton
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
+        />
+      </header>
+
+      <div className="editor-container">
+        <PreviewPlate/>
+        <ClipPool/>
+        <Timeline/>
+      </div>
+
+      <ExportDialog/>
+
       <div className="w-full flex justify-center">
         <FileInput onFileChange={onFileChange} />
       </div>
 
-       <ThemeToggleButton
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
+      <input type="file" id="file-input" accept="video/*,audio/*" multiple/>
+
+      <div id="loading-indicator" className="loading-indicator hidden">
+        <div className="spinner"></div>
+        <p>Processing...</p>
+      </div>
+
+      <ErrorNotification/>
+
+
+
+
+      <div className="w-full flex justify-center">
       
       {videoUrl && (
         <>
-          <div className="w-full flex justify-center">
+          <div className="">
             <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
           </div>
           <div className="flex flex-col items-center justify-center w-full space-y-4">
@@ -86,6 +118,25 @@ const App: React.FC = () => {
           </div>
         </>
       )}
+
+      {videoUrl && (
+        <>
+          <div className="flex flex-col items-center justify-center w-full">
+            <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
+          </div>
+          <div className="flex flex-col items-center justify-center w-full space-y-4">
+            <button
+              onClick={handlePlayPause}
+              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+            <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
+          </div>
+        </>
+      )}
+
+      </div>
     </>
   );
 };
