@@ -13,6 +13,12 @@ import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
+import { Timeline } from './timeline/timeline';
+import { PreviewRenderer } from './renderer/preview-renderer';
+import { FinalRenderer } from './renderer/final-renderer';
+import { debug, error as logError } from './utils/debug';
+import { loadFFmpeg } from './utils/ffmpeg-utils';
+import { VideoClip, AudioClip, Clip } from './timeline/clip';
 
 const App: React.FC = () => {
   const { ffmpeg, isFFmpegLoading } = useFFmpeg();
