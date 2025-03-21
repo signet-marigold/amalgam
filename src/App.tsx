@@ -59,7 +59,7 @@ const App: React.FC = () => {
   if (isFFmpegLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Loading ...</p>
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
