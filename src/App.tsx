@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
 import VolumeControl from "./components/VolumeControl";
+import ThemeToggleButton from "./components/ThemeToggleButton";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
@@ -69,25 +70,14 @@ const App: React.FC = () => {
     <>
       <h1 className="text-2xl font-bold text-center">Amalgam</h1>
       
-      <button
-        className="w-20 h-10 rounded-full bg-white focus:outline-none shadow"
-        onClick={toggleDarkMode}
-      >
-        <div
-          className={`w-12 h-12 relative rounded-full transition-all duration-500 transform ${
-            isDarkMode
-              ? 'bg-gray-700 translate-x-full'
-              : 'bg-yellow-500 -translate-x-2'
-          } p-1 text-white`}
-          dangerouslySetInnerHTML={{
-            __html: isDarkMode ? darkIcon : lightIcon,
-          }}
-        />
-      </button>
-
       <div className="w-full flex justify-center">
         <FileInput onFileChange={onFileChange} />
       </div>
+
+       <ThemeToggleButton
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
       
       {videoUrl && (
         <>
