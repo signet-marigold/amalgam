@@ -11,6 +11,8 @@ export class PreviewRenderer {
   private timelineStartTime: number = 0;
   private timeline: Timeline | null = null;
   private timeDisplay: HTMLElement;
+  private videoElements: Map<string, HTMLVideoElement> = new Map();
+  private videoLoadPromises: Map<string, Promise<void>> = new Map();
 
   // Callback for when playback state changes
   public onPlaybackStateChange: ((isPlaying: boolean) => void) | null = null;
@@ -54,38 +56,25 @@ export class PreviewRenderer {
     this.renderFrame(timeline.currentTime);
   }
 
-  togglePlayback(): void {
-    if (!this.timeline) {
-      debug('No timeline available for playback');
-      return;
-    }
-
-    if (this._isPlaying) {
-      this.stopPlayback();
-    } else {
-      this.startPlayback();
-    }
-  }
-
-  private startPlayback(): void {
-    if (!this.timeline) return;
+  public startPlayback(): void {
+    if (this._isPlaying) return;
 
     this._isPlaying = true;
-    this.playbackStartTime = performance.now();
-    this.timelineStartTime = this.timeline.currentTime;
+    this.playbackStartTime = performance.now() - (this.timeline?.currentTime || 0) * 1000;
+    this.timelineStartTime = this.timeline?.currentTime || 0;
 
-    // Start animation loop
-    this.animationFrameId = requestAnimationFrame(this.playbackLoop.bind(this));
+    // Start the animation loop
+    this.animate();
 
     // Notify about state change
     if (this.onPlaybackStateChange) {
       this.onPlaybackStateChange(true);
     }
 
-    debug('Started playback at time:', this.timelineStartTime);
+    debug('Started playback');
   }
 
-  private stopPlayback(): void {
+  public stopPlayback(): void {
     this._isPlaying = false;
 
     if (this.animationFrameId !== null) {
@@ -101,11 +90,11 @@ export class PreviewRenderer {
     debug('Stopped playback');
   }
 
-  private playbackLoop(timestamp: number): void {
+  private animate(): void {
     if (!this._isPlaying || !this.timeline) return;
 
     // Calculate elapsed time since playback started
-    const elapsedSeconds = (timestamp - this.playbackStartTime) / 1000;
+    const elapsedSeconds = (performance.now() - this.playbackStartTime) / 1000;
     const currentTime = this.timelineStartTime + elapsedSeconds;
 
     // Update timeline position
@@ -114,102 +103,93 @@ export class PreviewRenderer {
     // Render the current frame
     this.renderFrame(currentTime);
 
-    // Check if we've reached the end of the timeline
-    if (currentTime >= this.timeline.duration) {
-      this.stopPlayback();
-      return;
-    }
-
     // Continue the loop
-    this.animationFrameId = requestAnimationFrame(this.playbackLoop.bind(this));
+    this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
   }
 
-  private renderFrame(time: number): void {
+  private async renderFrame(time: number): Promise<void> {
     if (!this.ctx || !this.timeline) return;
 
     // Clear the canvas
-    this.ctx.fillStyle = 'black';
+    this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Find all video clips that are active at the current time
-    const activeClips = this.timeline.clips.filter(clip => {
+    // Get all clips at the current time
+    const clips = this.timeline.clips.filter(clip => {
       const clipStart = clip.trackStartTime;
       const clipEnd = clipStart + clip.duration;
-      return time >= clipStart && time < clipEnd && clip instanceof VideoClip;
-    }) as VideoClip[];
-
-    // Sort clips by track position (assuming higher track indices should be rendered on top)
-    activeClips.sort((a, b) => {
-      const trackA = this.timeline?.tracks.find(track => track.clips.includes(a));
-      const trackB = this.timeline?.tracks.find(track => track.clips.includes(b));
-
-      if (!trackA || !trackB) return 0;
-      return trackA.index - trackB.index;
+      return time >= clipStart && time < clipEnd;
     });
 
-    // Render each active clip
-    if (activeClips.length > 0) {
-      this.renderVideoClips(activeClips, time);
+    // Render each clip
+    for (const clip of clips) {
+      if (clip instanceof VideoClip) {
+        await this.renderVideoClip(clip, time);
+      }
     }
 
     // Update time display
     this.updateTimeDisplay(time);
   }
 
-  private renderVideoClips(clips: VideoClip[], currentTime: number): void {
+  private async renderVideoClip(clip: VideoClip, time: number): Promise<void> {
     if (!this.ctx) return;
 
-    // Render the clips in order (bottom to top)
-    clips.forEach(clip => {
-      const relativeTime = clip.getRelativeTime(currentTime);
-      if (relativeTime >= 0) {
-        this.renderVideoClip(clip, relativeTime);
-      }
-    });
-  }
-
-  // Cache for video elements to avoid creating them repeatedly
-  private videoCache: Map<string, HTMLVideoElement> = new Map();
-
-  private renderVideoClip(clip: VideoClip, time: number): void {
-    if (!this.ctx) return;
-
-    // Check cache for video element or create a new one
-    let video = this.videoCache.get(clip.id);
-    if (!video) {
-      video = document.createElement('video');
-      video.preload = 'auto';
-      video.src = clip.source;
-      video.muted = false; // Ensure audio is on by default
-      video.crossOrigin = 'anonymous'; // To avoid CORS issues
-      video.setAttribute('playsinline', ''); // For iOS support
-      this.videoCache.set(clip.id, video);
-
-      // Add video to the DOM but hide it
-      video.style.position = 'fixed';
-      video.style.left = '-9999px';
-      video.style.display = 'none';
-      document.body.appendChild(video);
-
-      // Load the video
-      video.load();
-    }
-
-    // Set current time for the video
-    if (Math.abs(video.currentTime - time) > 0.2) {
-      video.currentTime = time;
-    }
-
-    // Play the video if we're playing the timeline
-    if (this._isPlaying) {
-      video.play().catch(err => {
-        logError('Error playing video:', err);
-      });
-    } else {
-      video.pause();
-    }
+    // Calculate relative time within the clip
+    const relativeTime = clip.getRelativeTime(time);
+    if (relativeTime < 0) return;
 
     try {
+      // Get or create video element
+      let videoElement = this.videoElements.get(clip.id);
+      if (!videoElement) {
+        videoElement = document.createElement('video');
+        videoElement.src = clip.source;
+        videoElement.muted = true;
+        videoElement.preload = 'auto';
+        this.videoElements.set(clip.id, videoElement);
+        
+        // Create a promise for video loading
+        const loadPromise = new Promise<void>((resolve, reject) => {
+          const handleLoadedMetadata = () => {
+            videoElement?.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            videoElement?.removeEventListener('error', handleError);
+            resolve();
+          };
+          const handleError = () => {
+            videoElement?.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            videoElement?.removeEventListener('error', handleError);
+            reject(new Error('Error loading video metadata'));
+          };
+          videoElement?.addEventListener('loadedmetadata', handleLoadedMetadata);
+          videoElement?.addEventListener('error', handleError);
+        });
+
+        this.videoLoadPromises.set(clip.id, loadPromise);
+      }
+
+      // Wait for video to be ready
+      await this.videoLoadPromises.get(clip.id);
+
+      // Set video time
+      videoElement.currentTime = relativeTime;
+
+      // Wait for the frame to be ready
+      await new Promise<void>((resolve, reject) => {
+        const handleSeeked = () => {
+          videoElement?.removeEventListener('seeked', handleSeeked);
+          videoElement?.removeEventListener('error', handleError);
+          resolve();
+        };
+        const handleError = () => {
+          videoElement?.removeEventListener('seeked', handleSeeked);
+          videoElement?.removeEventListener('error', handleError);
+          reject(new Error('Error seeking video'));
+        };
+        videoElement?.addEventListener('seeked', handleSeeked);
+        videoElement?.addEventListener('error', handleError);
+      });
+
       // Calculate aspect ratio fitting
       const canvasAspect = this.canvas.width / this.canvas.height;
       const videoAspect = clip.aspectRatio;
@@ -220,39 +200,37 @@ export class PreviewRenderer {
       let offsetY = 0;
 
       if (canvasAspect > videoAspect) {
-        // Canvas is wider than video
         drawWidth = this.canvas.height * videoAspect;
         offsetX = (this.canvas.width - drawWidth) / 2;
       } else {
-        // Canvas is taller than video
         drawHeight = this.canvas.width / videoAspect;
         offsetY = (this.canvas.height - drawHeight) / 2;
       }
 
       // Draw the video frame
-      this.ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+      this.ctx.drawImage(videoElement, offsetX, offsetY, drawWidth, drawHeight);
     } catch (err) {
-      logError('Error rendering video frame');
-
-      // Show an error placeholder
-      if (this.ctx) {
-        this.ctx.fillStyle = 'red';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Error rendering frame', this.canvas.width / 2, this.canvas.height / 2);
-      }
+      logError('Error rendering video frame:', err);
+      this.drawErrorPlaceholder();
     }
+  }
+
+  private drawErrorPlaceholder(): void {
+    if (!this.ctx) return;
+    this.ctx.fillStyle = 'red';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '16px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('Error rendering frame', this.canvas.width / 2, this.canvas.height / 2);
   }
 
   private updateTimeDisplay(currentTime: number): void {
     if (!this.timeline) return;
 
-    const formattedCurrentTime = this.formatTime(currentTime);
-    const formattedDuration = this.formatTime(this.timeline.duration);
-
-    this.timeDisplay.textContent = `${formattedCurrentTime} / ${formattedDuration}`;
+    const currentTimeStr = this.formatTime(currentTime);
+    const totalTimeStr = this.formatTime(this.timeline.duration);
+    this.timeDisplay.textContent = `${currentTimeStr} / ${totalTimeStr}`;
   }
 
   private formatTime(seconds: number): string {
@@ -261,5 +239,16 @@ export class PreviewRenderer {
     const secs = Math.floor(seconds % 60);
 
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Clean up video elements when clips are removed
+  public cleanupVideoElement(clipId: string): void {
+    const videoElement = this.videoElements.get(clipId);
+    if (videoElement) {
+      videoElement.src = '';
+      videoElement.load();
+      this.videoElements.delete(clipId);
+      this.videoLoadPromises.delete(clipId);
+    }
   }
 }

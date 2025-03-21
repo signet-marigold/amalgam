@@ -12,8 +12,9 @@ import ExportDialog from "./components/ExportDialog";
 import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
-import { handleFileChange } from "./utils/fileUtils";
-import { Timeline } from './timeline/timeline';
+import { handleFileChange as processFile } from "./utils/fileUtils";
+import { revokeAllBlobUrls } from "./utils/fileUtils";
+import { Timeline as TimelineClass } from './timeline/timeline';
 import { PreviewRenderer } from './renderer/preview-renderer';
 import { FinalRenderer } from './renderer/final-renderer';
 import { debug, error as logError } from './utils/debug';
@@ -21,106 +22,105 @@ import { loadFFmpeg } from './utils/ffmpeg-utils';
 import { VideoClip, AudioClip, Clip } from './timeline/clip';
 
 const App: React.FC = () => {
-  const { ffmpeg, isFFmpegLoading } = useFFmpeg();
-
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.3);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [timeline, setTimeline] = useState<TimelineClass | null>(null);
+  const [clipPool, setClipPool] = useState<VideoClip[]>([]);
 
-  const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
+  const toggleDarkMode = useCallback(() => {
+    setIsDarkMode(prev => !prev);
+  }, []);
 
-  useEffect(() => {
-    document.body.classList.remove('preload-style');
-    document.documentElement.classList.toggle(
-      "dark",
-      localStorage.theme === "dark" ||
-        (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches),
-    );
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+  }, []);
 
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark');
+  const handleClipSelect = useCallback((clip: VideoClip) => {
+    if (!timeline) return;
+    
+    // Remove the clip from the clip pool
+    setClipPool(prevPool => prevPool.filter(c => c.id !== clip.id) as VideoClip[]);
+    
+    // Add the clip to the timeline
+    timeline.addClip(clip);
+  }, [timeline]);
+
+  const handleFileChange = useCallback(async (file: File) => {
+    try {
+      // Process the file and create a clip
+      const clip = await processFile(file);
+      
+      // Add the clip to the clip pool
+      setClipPool(prevPool => [...prevPool, clip] as VideoClip[]);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      // Handle error appropriately
     }
   }, []);
 
-  const toggleDarkMode = () => {
-    localStorage.setItem('theme', !isDarkMode ? 'dark' : 'light');
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark", !isDarkMode);
-  };
+  const handleClipDelete = useCallback((clip: VideoClip) => {
+    if (!timeline) return;
+    timeline.removeClip(clip.id);
+  }, [timeline]);
 
-  const onFileChange = async (file: File) => {
-    await handleFileChange(file, setVideoUrl, addClip);
-  };
+  const handleZoomIn = useCallback(() => {
+    if (timeline) {
+      timeline.zoomIn();
+    }
+  }, [timeline]);
 
-  const handlePlayPause = useCallback(() => {
-    setPlaying((prevPlaying) => !prevPlaying);
+  const handleZoomOut = useCallback(() => {
+    if (timeline) {
+      timeline.zoomOut();
+    }
+  }, [timeline]);
+
+  useEffect(() => {
+    // Initialize timeline
+    const newTimeline = new TimelineClass();
+    setTimeline(newTimeline);
+
+    // Cleanup
+    return () => {
+      if (!newTimeline) return;
+      
+      // Stop playback if active
+      if (newTimeline.isPlaying) {
+        newTimeline.stopPlayback();
+      }
+      
+      // Remove all clips from timeline
+      newTimeline.clips.forEach(clip => {
+        newTimeline.removeClip(clip.id);
+      });
+      
+      // Clear tracks
+      newTimeline.tracks.forEach(track => {
+        const trackElement = document.getElementById(track.id);
+        if (trackElement) {
+          trackElement.remove();
+        }
+      });
+      
+      // Revoke all blob URLs
+      revokeAllBlobUrls();
+    };
   }, []);
-
-  const handleVolumeChange = useCallback((value: number) => {
-    setVolume(value);
-  }, []);
-
-  if (isFFmpegLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading ...</p>
-      </div>
-    );
-  }
 
   return (
-    <>
-      <header className="w-full flex justify-between items-center px-5 py-2 border-solid border-b-1 border-bordercolor">
-        <h1 className="text-xl text-center">Browser Video Editor</h1>
-        <Toolbar/>
-        <ThemeToggleButton
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
+    <div className="flex flex-col h-screen bg-background text-text">
+      <Toolbar onFileChange={handleFileChange} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {timeline && <PreviewPlate timeline={timeline} />}
+        <ClipPool 
+          clips={clipPool} 
+          onClipSelect={handleClipSelect} 
+          onClipDelete={handleClipDelete} 
         />
-      </header>
-
-      <div className="editor-container">
-        <PreviewPlate/>
-        <ClipPool/>
-        <Timeline/>
+        {timeline && <Timeline timeline={timeline} />}
       </div>
-
-      <ExportDialog/>
-
-      <div className="w-full flex justify-center">
-        <FileInput onFileChange={onFileChange} />
-      </div>
-
-      <div id="loading-indicator" className="loading-indicator hidden">
-        <div className="spinner"></div>
-        <p>Processing...</p>
-      </div>
-
-      <ErrorNotification/>
-
-      <div className="w-full flex justify-center">
-
-      {videoUrl && (
-        <>
-          <div className="flex flex-col items-center justify-center w-full">
-            <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
-          </div>
-          <div className="flex flex-col items-center justify-center w-full space-y-4">
-            <button
-              onClick={handlePlayPause}
-              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-            >
-              {playing ? "Pause" : "Play"}
-            </button>
-            <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
-          </div>
-        </>
-      )}
-
-      </div>
-    </>
+      <ErrorNotification />
+    </div>
   );
 };
 

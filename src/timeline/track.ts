@@ -2,8 +2,8 @@ import { Clip } from './clip';
 import { debug } from '../utils/debug';
 
 export enum TrackType {
-  Video = 'Video',
-  Audio = 'Audio'
+  Video = 'video',
+  Audio = 'audio'
 }
 
 export interface TrackProps {
@@ -22,6 +22,7 @@ export class Track {
   private _isMuted: boolean = false;
   private _isSolo: boolean = false;
   private _isLocked: boolean = false;
+  private _element: HTMLElement | null = null;
 
   constructor(props: TrackProps) {
     this._id = props.id;
@@ -82,6 +83,14 @@ export class Track {
 
   set isLocked(value: boolean) {
     this._isLocked = value;
+  }
+
+  get element(): HTMLElement | null {
+    return this._element;
+  }
+
+  set element(value: HTMLElement | null) {
+    this._element = value;
   }
 
   // Add a clip to this track
