@@ -23,6 +23,8 @@ export class Timeline extends EventEmitter {
   private _animationFrameId: number | null = null;
   private _previewRenderer: any = null; // Reference to the preview renderer
   private _pixelsPerSecond: number = 5.56; // 1000 pixels for 3 minutes (180 seconds)
+  private _minTickDistance: number = 50; // Minimum distance between ticks in pixels
+  private _maxTickDensity: number = 20; // Maximum number of ticks per second
 
   constructor() {
     super();
@@ -341,21 +343,22 @@ export class Timeline extends EventEmitter {
     this._pixelsPerSecond *= 1.2;
     this.updateTimelineScale();
     this.updateClipSizes();
+    this.drawRuler();
   }
 
   zoomOut(): void {
     this._pixelsPerSecond /= 1.2;
     this.updateTimelineScale();
     this.updateClipSizes();
+    this.drawRuler();
   }
 
   private updateTimelineScale(): void {
     if (!this._tracksContainer || !this._rulerElement) return;
 
-    // Update the width of the timeline based on duration and pixels per second
-    const totalWidth = this._duration * this._pixelsPerSecond;
-    this._tracksContainer.style.width = `${totalWidth}px`;
-    this._rulerElement.style.width = `${totalWidth}px`;
+    // Set the container to viewport width
+    this._tracksContainer.style.width = '100%';
+    this._rulerElement.style.width = '100%';
 
     // Update clip positions and sizes
     this.updateClipSizes();
@@ -663,24 +666,62 @@ export class Timeline extends EventEmitter {
     ticksContainer.className = 'ruler-ticks';
     this._rulerElement.appendChild(ticksContainer);
 
-    // Function to update ticks based on container width
+    // Function to update ticks based on container width and zoom level
     const updateTicks = () => {
       const containerWidth = this._rulerElement!.clientWidth;
-      const pixelsPerSecond = this._pixelsPerSecond * this._scale;
+      const pixelsPerSecond = this._pixelsPerSecond;
       const visibleDuration = containerWidth / pixelsPerSecond;
       
       // Clear previous ticks
       ticksContainer.innerHTML = '';
 
-      const majorTickInterval = 5; // 5 seconds
-      const minorTickInterval = 1; // 1 second
-      const subMinorTickInterval = 0.25; // 0.25 seconds
+      // Calculate tick intervals based on zoom level and minimum distance
+      const baseInterval = 1; // 1 second base interval
+      const pixelsPerInterval = baseInterval * pixelsPerSecond;
+      
+      // Scale minTickDistance and maxTickDensity based on zoom level
+      const scaledMinTickDistance = this._minTickDistance * (1 / pixelsPerSecond);
+      const scaledMaxTickDensity = this._maxTickDensity * pixelsPerSecond;
+      
+      // Calculate how many intervals we can fit with minimum distance
+      const intervalsPerSecond = Math.min(
+        scaledMaxTickDensity,
+        Math.floor(pixelsPerSecond / scaledMinTickDistance)
+      );
+
+      // Determine major, minor, and sub-minor intervals
+      let majorInterval = baseInterval;
+      let minorInterval = baseInterval;
+      let subMinorInterval = baseInterval;
+
+      if (intervalsPerSecond >= 20) {
+        majorInterval = 5; // 5 seconds
+        minorInterval = 1; // 1 second
+        subMinorInterval = 0.25; // 0.25 seconds
+      } else if (intervalsPerSecond >= 10) {
+        majorInterval = 5; // 5 seconds
+        minorInterval = 1; // 1 second
+        subMinorInterval = 0.5; // 0.5 seconds
+      } else if (intervalsPerSecond >= 5) {
+        majorInterval = 10; // 10 seconds
+        minorInterval = 2; // 2 seconds
+        subMinorInterval = 1; // 1 second
+      } else if (intervalsPerSecond >= 2) {
+        majorInterval = 30; // 30 seconds
+        minorInterval = 5; // 5 seconds
+        subMinorInterval = 1; // 1 second
+      } else {
+        majorInterval = 60; // 1 minute
+        minorInterval = 15; // 15 seconds
+        subMinorInterval = 5; // 5 seconds
+      }
+
       const majorTickHeight = 20;
       const minorTickHeight = 15;
       const subMinorTickHeight = 10;
 
-      // Draw major ticks (5 seconds)
-      for (let time = 0; time <= visibleDuration; time += majorTickInterval) {
+      // Draw major ticks
+      for (let time = 0; time <= visibleDuration; time += majorInterval) {
         const x = time * pixelsPerSecond;
         const tick = document.createElement('div');
         tick.className = 'ruler-tick major';
@@ -696,9 +737,9 @@ export class Timeline extends EventEmitter {
         ticksContainer.appendChild(label);
       }
 
-      // Draw minor ticks (1 second)
-      for (let time = 0; time <= visibleDuration; time += minorTickInterval) {
-        if (time % majorTickInterval !== 0) {
+      // Draw minor ticks
+      for (let time = 0; time <= visibleDuration; time += minorInterval) {
+        if (time % majorInterval !== 0) {
           const x = time * pixelsPerSecond;
           const tick = document.createElement('div');
           tick.className = 'ruler-tick minor';
@@ -708,9 +749,9 @@ export class Timeline extends EventEmitter {
         }
       }
 
-      // Draw sub-minor ticks (0.25 seconds)
-      for (let time = 0; time <= visibleDuration; time += subMinorTickInterval) {
-        if (time % minorTickInterval !== 0) {
+      // Draw sub-minor ticks
+      for (let time = 0; time <= visibleDuration; time += subMinorInterval) {
+        if (time % minorInterval !== 0) {
           const x = time * pixelsPerSecond;
           const tick = document.createElement('div');
           tick.className = 'ruler-tick sub-minor';
