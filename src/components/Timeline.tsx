@@ -6,12 +6,12 @@ import { Clip } from '../timeline/clip';
 import { formatTime } from '../utils/timeUtils';
 import '../styles/timeline.css';
 
-interface TimelineProps {
+interface TimelineComponentProps {
   timeline: Timeline;
 }
 
-const TimelineComponent: React.FC<TimelineProps> = ({ timeline }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+const TimelineComponent: React.FC<TimelineComponentProps> = ({ timeline }) => {
+  const timelineRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
   const tracksRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -23,27 +23,9 @@ const TimelineComponent: React.FC<TimelineProps> = ({ timeline }) => {
   const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
-    if (!containerRef.current || !rulerRef.current || !tracksRef.current) return;
-
-    // Initialize timeline with DOM elements
-    timeline.initialize(
-      containerRef.current,
-      rulerRef.current,
-      tracksRef.current
-    );
-
-    const handleScroll = () => {
-      if (rulerRef.current && tracksRef.current) {
-        rulerRef.current.scrollLeft = tracksRef.current.scrollLeft;
-      }
-    };
-
-    tracksRef.current.addEventListener('scroll', handleScroll);
-    return () => {
-      if (tracksRef.current) {
-        tracksRef.current.removeEventListener('scroll', handleScroll);
-      }
-    };
+    if (timelineRef.current && rulerRef.current && tracksRef.current) {
+      timeline.initialize(timelineRef.current, rulerRef.current, tracksRef.current);
+    }
   }, [timeline]);
 
   // Handle timeline time updates
@@ -165,60 +147,123 @@ const TimelineComponent: React.FC<TimelineProps> = ({ timeline }) => {
     return markers;
   }, [timeline.duration, zoom]);
 
+  const handleAddTrack = () => {
+    const newTrack = new Track(TrackType.Video);
+    newTrack.id = `video-track-${timeline.tracks.length + 1}`;
+    newTrack.name = `Video ${timeline.tracks.length + 1}`;
+    newTrack.index = timeline.tracks.length;
+
+    // Add track to timeline data model
+    timeline.addTrack(newTrack);
+
+    // Create track element in DOM
+    if (tracksRef.current) {
+      const trackElement = document.createElement('div');
+      trackElement.id = newTrack.id;
+      trackElement.className = `track ${newTrack.type.toLowerCase()}-track`;
+      trackElement.setAttribute('data-track-id', newTrack.id);
+      
+      // Create track header
+      const trackHeader = document.createElement('div');
+      trackHeader.className = 'track-header';
+      trackHeader.textContent = newTrack.name;
+      
+      // Create track content container
+      const trackContent = document.createElement('div');
+      trackContent.className = 'track-content';
+      
+      // Assemble track element
+      trackElement.appendChild(trackHeader);
+      trackElement.appendChild(trackContent);
+      
+      // Add track element to container
+      tracksRef.current.appendChild(trackElement);
+      
+      // Store reference to DOM element
+      newTrack.element = trackElement;
+      
+      // Add event listeners
+      trackElement.addEventListener('click', () => {
+        timeline.setSelectedTrack(newTrack);
+      });
+      
+      trackElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        timeline.setSelectedTrack(newTrack);
+        timeline.showContextMenu(e.clientX, e.clientY);
+      });
+    }
+  };
+
+  const handleRemoveTrack = () => {
+    const selectedTrack = timeline.selectedTrack;
+    if (selectedTrack && 
+        !selectedTrack.id.startsWith('video-track-1') && 
+        !selectedTrack.id.startsWith('audio-track-1')) {
+      timeline.removeTrack(selectedTrack.id);
+    }
+  };
+
   return (
-    <div className="timeline-container" ref={containerRef}>
-      <div className="timeline-ruler" ref={rulerRef}>
-        <div className="relative h-6 bg-gray-100">
-          {renderTimeMarkers()}
-        </div>
+    <div className="timeline-wrapper">
+      <div className="timeline-controls">
+        <button onClick={handleAddTrack}>Add Track</button>
+        <button onClick={handleRemoveTrack} disabled={!timeline.selectedTrack}>Remove Track</button>
       </div>
-      <div className="tracks-container" ref={tracksRef}>
-        {timeline.tracks.map(track => (
-          <div
-            key={track.id}
-            className="track"
-            onDragOver={handleClipDragOver}
-            onDrop={handleClipDrop}
-          >
-            {track.clips.map(clip => (
-              <div
-                key={clip.id}
-                className="clip"
-                style={{
-                  left: `${timeline.timeToPixels(clip.startTime)}px`,
-                  width: `${timeline.timeToPixels(clip.endTime - clip.startTime)}px`,
-                }}
-                draggable
-                onDragStart={(e) => handleClipDragStart(e, clip)}
-              >
-                <div className="clip-content">
-                  <div className="clip-name">{clip.name}</div>
-                  <div className="clip-duration">
-                    {formatTime(clip.endTime - clip.startTime)}
-                  </div>
-                </div>
-                <div
-                  className="resize-handle left"
-                  onMouseDown={(e) => handleClipResizeStart(e, clip, true)}
-                />
-                <div
-                  className="resize-handle right"
-                  onMouseDown={(e) => handleClipResizeStart(e, clip, false)}
-                />
-              </div>
-            ))}
+      <div className="timeline-container" ref={timelineRef}>
+        <div className="timeline-ruler" ref={rulerRef}>
+          <div className="relative h-6 bg-gray-100">
+            {renderTimeMarkers()}
           </div>
-        ))}
-      </div>
-      <div
-        className="playhead"
-        style={{
-          left: `${timeline.timeToPixels(timeline.currentTime)}px`,
-        }}
-      />
-      <div className="zoom-controls">
-        <button onClick={() => handleZoom(1)}>+</button>
-        <button onClick={() => handleZoom(-1)}>-</button>
+        </div>
+        <div className="tracks-container" ref={tracksRef}>
+          {timeline.tracks.map(track => (
+            <div
+              key={track.id}
+              className="track"
+              onDragOver={handleClipDragOver}
+              onDrop={handleClipDrop}
+            >
+              {track.clips.map(clip => (
+                <div
+                  key={clip.id}
+                  className="clip"
+                  style={{
+                    left: `${timeline.timeToPixels(clip.startTime)}px`,
+                    width: `${timeline.timeToPixels(clip.endTime - clip.startTime)}px`,
+                  }}
+                  draggable
+                  onDragStart={(e) => handleClipDragStart(e, clip)}
+                >
+                  <div className="clip-content">
+                    <div className="clip-name">{clip.name}</div>
+                    <div className="clip-duration">
+                      {formatTime(clip.endTime - clip.startTime)}
+                    </div>
+                  </div>
+                  <div
+                    className="resize-handle left"
+                    onMouseDown={(e) => handleClipResizeStart(e, clip, true)}
+                  />
+                  <div
+                    className="resize-handle right"
+                    onMouseDown={(e) => handleClipResizeStart(e, clip, false)}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div
+          className="playhead"
+          style={{
+            left: `${timeline.timeToPixels(timeline.currentTime)}px`,
+          }}
+        />
+        <div className="zoom-controls">
+          <button onClick={() => handleZoom(1)}>+</button>
+          <button onClick={() => handleZoom(-1)}>-</button>
+        </div>
       </div>
     </div>
   );

@@ -26,6 +26,8 @@ export class Timeline extends EventEmitter {
   private _minTickDistance: number = 50; // Minimum distance between ticks in pixels
   private _maxTickDensity: number = 20; // Maximum number of ticks per second
   private _selectedTrack: Track | null = null;
+  private _originalTrackId: string = '';
+  private _originalStartTime: number = 0;
 
   constructor() {
     super();
@@ -177,9 +179,13 @@ export class Timeline extends EventEmitter {
         const clipId = clipElement.dataset.clipId;
         const clip = this._clips.find(c => c.id === clipId);
         if (clip) {
-        this._isDragging = true;
+          this._isDragging = true;
           this._draggedClip = clip;
-        this._lastMouseX = e.clientX;
+          this._lastMouseX = e.clientX;
+          this._originalTrackId = clip.trackId;
+          this._originalStartTime = clip.trackStartTime;
+          clipElement.classList.add('dragging');
+          document.body.style.cursor = 'move';
         }
       }
     });
@@ -188,19 +194,75 @@ export class Timeline extends EventEmitter {
       if (!this._isDragging || !this._draggedClip || !this._timelineElement) return;
 
       const rect = this._timelineElement.getBoundingClientRect();
-        const deltaX = e.clientX - this._lastMouseX;
-      const deltaTime = this.pixelsToTime(deltaX);
+      const mouseX = e.clientX - rect.left;
+      const newTime = this.pixelsToTime(mouseX);
 
-      this._draggedClip.trackStartTime += deltaTime;
-        this._lastMouseX = e.clientX;
+      // Update clip position
+      this._draggedClip.trackStartTime = Math.max(0, newTime);
+      this._lastMouseX = e.clientX;
 
-      this.updateClipPosition(this._draggedClip);
+      // Update clip element position
+      const clipElement = document.querySelector(`[data-clip-id="${this._draggedClip.id}"]`) as HTMLElement;
+      if (clipElement) {
+        const x = this.timeToPixels(this._draggedClip.trackStartTime);
+        clipElement.style.left = `${x}px`;
+      }
+
+      // Check if we're over a track
+      const trackElement = this.findTrackElementAtPosition(e.clientY);
+      if (trackElement) {
+        trackElement.classList.add('drag-over');
+      } else {
+        // Remove drag-over class from all tracks
+        document.querySelectorAll('.track').forEach(t => t.classList.remove('drag-over'));
+      }
+
+      // Handle horizontal scrolling
+      if (this._tracksContainer) {
+        const containerRect = this._tracksContainer.getBoundingClientRect();
+        const scrollSpeed = 20; // pixels per frame
+
+        if (e.clientX < containerRect.left + 100) {
+          this._tracksContainer.scrollLeft -= scrollSpeed;
+        } else if (e.clientX > containerRect.right - 100) {
+          this._tracksContainer.scrollLeft += scrollSpeed;
+        }
+      }
     });
 
-    document.addEventListener('mouseup', () => {
-      if (this._isDragging) {
+    document.addEventListener('mouseup', (e) => {
+      if (this._isDragging && this._draggedClip) {
+        // Find track at mouse position
+        const trackElement = this.findTrackElementAtPosition(e.clientY);
+        
+        if (trackElement) {
+          // Get the track ID from the element
+          const trackId = trackElement.getAttribute('data-track-id');
+          if (trackId && trackId !== this._draggedClip.trackId) {
+            // Move clip to new track
+            this._draggedClip.trackId = trackId;
+            const trackContent = trackElement.querySelector('.track-content');
+            if (trackContent) {
+              const clipElement = document.querySelector(`[data-clip-id="${this._draggedClip.id}"]`);
+              if (clipElement) {
+                trackContent.appendChild(clipElement);
+              }
+            }
+            this.emit('clipmoved', { clipId: this._draggedClip.id, trackId });
+          }
+        } else {
+          // Return clip to original position
+          this._draggedClip.trackId = this._originalTrackId;
+          this._draggedClip.trackStartTime = this._originalStartTime;
+          this.updateClipPosition(this._draggedClip);
+        }
+
+        // Clean up
         this._isDragging = false;
         this._draggedClip = null;
+        document.querySelectorAll('.track').forEach(t => t.classList.remove('drag-over'));
+        document.querySelectorAll('.clip').forEach(c => c.classList.remove('dragging'));
+        document.body.style.cursor = '';
       }
     });
 
@@ -417,7 +479,7 @@ export class Timeline extends EventEmitter {
 
   private updateClipSizes(): void {
     this._clips.forEach(clip => {
-      const clipElement = document.querySelector(`[data-clip-id="${clip.id}"]`);
+      const clipElement = document.querySelector(`[data-clip-id="${clip.id}"]`) as HTMLElement;
       if (clipElement instanceof HTMLElement) {
         const start = this.timeToPixels(clip.startTime);
         const width = this.timeToPixels(clip.endTime - clip.startTime);
@@ -634,8 +696,8 @@ export class Timeline extends EventEmitter {
     clipElement.setAttribute('data-clip-id', clip.id);
 
     // Position the clip
-    const clipStart = this.timeToPixels(clip.startTime);
-    const clipWidth = this.timeToPixels(clip.endTime - clip.startTime);
+    const clipStart = this.timeToPixels(clip.trackStartTime);
+    const clipWidth = this.timeToPixels(clip.duration);
 
     clipElement.style.left = `${clipStart}px`;
     clipElement.style.width = `${clipWidth}px`;
@@ -653,7 +715,7 @@ export class Timeline extends EventEmitter {
     // Add duration
     const durationElement = document.createElement('div');
     durationElement.className = 'clip-duration';
-    durationElement.textContent = formatTime(clip.endTime - clip.startTime);
+    durationElement.textContent = formatTime(clip.duration);
     clipContent.appendChild(durationElement);
 
     // Add resize handles
@@ -669,12 +731,6 @@ export class Timeline extends EventEmitter {
     rightHandle.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       this.handleClipResize(clip, false, e);
-    });
-
-    // Add drag functionality
-    clipElement.draggable = true;
-    clipElement.addEventListener('dragstart', (e) => {
-      e.dataTransfer?.setData('text/plain', clip.id);
     });
 
     // Assemble the clip element
@@ -928,5 +984,25 @@ export class Timeline extends EventEmitter {
 
   get selectedTrack(): Track | null {
     return this._selectedTrack;
+  }
+
+  public setSelectedTrack(track: Track | null): void {
+    this._selectedTrack = track;
+    this.emit('trackselected', { track });
+  }
+
+  public showContextMenu(x: number, y: number): void {
+    this.showTrackContextMenu(x, y);
+  }
+
+  private findTrackElementAtPosition(y: number): HTMLElement | null {
+    const tracks = document.querySelectorAll('.track');
+    for (const track of tracks) {
+      const rect = track.getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) {
+        return track as HTMLElement;
+      }
+    }
+    return null;
   }
 }
