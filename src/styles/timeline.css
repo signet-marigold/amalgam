@@ -5,6 +5,8 @@
   background: #1a1a1a;
   overflow: hidden;
   border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
 }
 
 .timeline-ruler {
@@ -16,6 +18,7 @@
   height: 30px;
   overflow: hidden;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .ruler-ticks {
@@ -60,11 +63,20 @@
 
 .tracks-container {
   position: relative;
-  height: calc(100% - 30px);
+  flex: 1;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   will-change: transform;
-  width: 100%;
+}
+
+.track-header {
+  position: absolute;
+  z-index: 3;
+  color: #fff;
+  margin: 4px 5px;
+  padding: 0px 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
 }
 
 .track {
@@ -73,6 +85,18 @@
   border-bottom: 1px solid #333;
   background: #222;
   min-width: 100%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.track:hover {
+  background: #2a2a2a;
+}
+
+.track.selected {
+  background: #333;
+  border-left: 3px solid #4a90e2;
 }
 
 .clip {
@@ -225,4 +249,36 @@
 .drop-zone-content p {
   margin: 0;
   font-size: 14px;
+}
+
+.track-context-menu {
+  position: fixed;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 150px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.track-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.track-context-menu button:hover {
+  background: #333;
+}
+
+.track-context-menu button:active {
+  background: #444;
 } 

@@ -25,6 +25,7 @@ export class Timeline extends EventEmitter {
   private _pixelsPerSecond: number = 5.56; // 1000 pixels for 3 minutes (180 seconds)
   private _minTickDistance: number = 50; // Minimum distance between ticks in pixels
   private _maxTickDensity: number = 20; // Maximum number of ticks per second
+  private _selectedTrack: Track | null = null;
 
   constructor() {
     super();
@@ -40,38 +41,38 @@ export class Timeline extends EventEmitter {
     this._tracksContainer = tracksContainer;
 
     // Create default tracks if they don't exist yet
-    if (this._tracks.length === 0) {
-      // Create default video track
+      if (this._tracks.length === 0) {
+        // Create default video track
       const videoTrack = new Track(TrackType.Video);
       videoTrack.id = 'video-track-1';
       videoTrack.name = 'Video 1';
       videoTrack.index = 0;
-      this._tracks.push(videoTrack);
+        this._tracks.push(videoTrack);
 
-      // Create default audio track
+        // Create default audio track
       const audioTrack = new Track(TrackType.Audio);
       audioTrack.id = 'audio-track-1';
       audioTrack.name = 'Audio 1';
       audioTrack.index = 1;
-      this._tracks.push(audioTrack);
+        this._tracks.push(audioTrack);
     }
 
-    // Create track elements in the DOM
-    this._tracks.forEach(track => {
-      debug('Created track:', track.name, `(${track.type})`);
-      this.createTrackElement(track);
-    });
+        // Create track elements in the DOM
+        this._tracks.forEach(track => {
+          debug('Created track:', track.name, `(${track.type})`);
+          this.createTrackElement(track);
+        });
 
     // Create playhead element
-    this._playheadElement = document.createElement('div');
-    this._playheadElement.className = 'playhead';
-    this._timelineElement.appendChild(this._playheadElement);
+      this._playheadElement = document.createElement('div');
+      this._playheadElement.className = 'playhead';
+      this._timelineElement.appendChild(this._playheadElement);
 
     // Draw initial ruler
     this.drawRuler();
 
-    // Set up event listeners
-    this.setupEventListeners();
+      // Set up event listeners
+      this.setupEventListeners();
   }
 
   public setScale(newScale: number): void {
@@ -233,6 +234,29 @@ export class Timeline extends EventEmitter {
           break;
       }
     });
+
+    // Track selection and context menu
+    this._timelineElement.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      
+      const target = e.target as HTMLElement;
+      const trackElement = target.closest('.track') as HTMLElement;
+      
+      if (trackElement) {
+        const trackId = trackElement.getAttribute('data-track-id');
+        const track = this._tracks.find(t => t.id === trackId);
+        
+        if (track) {
+          this._selectedTrack = track;
+          this.showTrackContextMenu(e.clientX, e.clientY);
+        }
+      }
+    });
+
+    // Close context menu when clicking outside
+    document.addEventListener('click', () => {
+      this.hideTrackContextMenu();
+    });
   }
 
   private updateClipPosition(clip: Clip): void {
@@ -264,37 +288,64 @@ export class Timeline extends EventEmitter {
   }
 
   public addClip(clip: Clip): void {
-    // Find the first available track
-    let targetTrack = this._tracks.find(t => t.type === clip.type);
+    // Find the first available track of the same type
+    let targetTrack = this._tracks.find(t => 
+      t.type === clip.type && 
+      !this.isTrackOccupiedAt(t, clip.trackStartTime, clip.duration)
+    );
+
+    // If no available track found, create a new one
     if (!targetTrack) {
-      // Create a new track if none exists for this clip type
       const newTrack = new Track(clip.type);
       newTrack.id = `${clip.type.toLowerCase()}-track-${this._tracks.length + 1}`;
       newTrack.name = `${clip.type} ${this._tracks.length + 1}`;
       newTrack.index = this._tracks.length;
+      
+      // Add the track to the timeline
       this.addTrack(newTrack);
-      clip.trackId = newTrack.id;
+      
+      // Create the track element in the DOM
+      this.createTrackElement(newTrack);
+      
       targetTrack = newTrack;
-    } else {
-      clip.trackId = targetTrack.id;
     }
 
+    // Set the clip's track ID and add it to the timeline
+    clip.trackId = targetTrack.id;
     this._clips.push(clip);
     this._updateDuration();
     this.emit('clipadded', { clip });
-    
+
     // Create the clip element in the DOM
-    if (targetTrack) {
-      this.createClipElement(clip, targetTrack);
-    }
+    this.createClipElement(clip, targetTrack);
   }
 
   removeClip(clipId: string): void {
     const clipIndex = this._clips.findIndex(c => c.id === clipId);
     if (clipIndex === -1) return;
 
-      const clip = this._clips[clipIndex];
+    const clip = this._clips[clipIndex];
+    const trackId = clip.trackId;
+    
+    // Remove the clip
     this._clips.splice(clipIndex, 1);
+    
+    // Remove the clip element from the DOM
+    const clipElement = document.querySelector(`[data-clip-id="${clipId}"]`);
+    if (clipElement) {
+      clipElement.remove();
+    }
+
+    // Check if the track is empty (no more clips)
+    const trackClips = this._clips.filter(c => c.trackId === trackId);
+    if (trackClips.length === 0) {
+      // Only remove the track if it's not one of the default tracks
+      const track = this._tracks.find(t => t.id === trackId);
+      if (track && !trackId.startsWith('video-track-1') && !trackId.startsWith('audio-track-1')) {
+        this.removeTrack(trackId);
+      }
+    }
+
     this._updateDuration();
     this.emit('clipremoved', { clipId });
   }
@@ -379,7 +430,10 @@ export class Timeline extends EventEmitter {
   private isTrackOccupiedAt(track: Track, startTime: number, duration: number): boolean {
     const endTime = startTime + duration;
 
-    return track.clips.some(clip => {
+    // Get all clips in this track
+    const trackClips = this._clips.filter(clip => clip.trackId === track.id);
+
+    return trackClips.some(clip => {
       const clipStart = clip.trackStartTime;
       const clipEnd = clipStart + clip.duration;
 
@@ -730,8 +784,8 @@ export class Timeline extends EventEmitter {
         ticksContainer.appendChild(tick);
 
         // Add time label
-        const label = document.createElement('div');
-        label.className = 'ruler-label';
+      const label = document.createElement('div');
+      label.className = 'ruler-label';
         label.textContent = formatTime(time);
         label.style.left = `${x}px`;
         ticksContainer.appendChild(label);
@@ -825,5 +879,54 @@ export class Timeline extends EventEmitter {
     clip.startTime = newStartTime;
     clip.endTime = newEndTime;
     clip.trackId = trackId;
+  }
+
+  private showTrackContextMenu(x: number, y: number): void {
+    // Remove existing context menu if any
+    this.hideTrackContextMenu();
+
+    // Create context menu
+    const menu = document.createElement('div');
+    menu.className = 'track-context-menu';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+
+    // Add menu items
+    const removeClipButton = document.createElement('button');
+    removeClipButton.textContent = 'Remove Clip';
+    removeClipButton.onclick = () => {
+      if (this._selectedTrack) {
+        // Find all clips in this track
+        const trackClips = this._clips.filter(clip => clip.trackId === this._selectedTrack!.id);
+        
+        // Remove all clips from this track
+        trackClips.forEach(clip => {
+          this.removeClip(clip.id);
+        });
+        
+        // Remove the track if it's not one of the default tracks
+        if (!this._selectedTrack.id.startsWith('video-track-1') && 
+            !this._selectedTrack.id.startsWith('audio-track-1')) {
+          this.removeTrack(this._selectedTrack.id);
+        }
+        
+        this.hideTrackContextMenu();
+      }
+    };
+
+    menu.appendChild(removeClipButton);
+    document.body.appendChild(menu);
+  }
+
+  private hideTrackContextMenu(): void {
+    const menu = document.querySelector('.track-context-menu');
+    if (menu) {
+      menu.remove();
+    }
+    this._selectedTrack = null;
+  }
+
+  get selectedTrack(): Track | null {
+    return this._selectedTrack;
   }
 }
