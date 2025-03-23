@@ -1,29 +1,70 @@
-# Amalgam
+# Video Editor
 
-Amalgam is a modern video player built with React and WebAssembly, designed to provide a seamless and high-performance video playback experience directly in the browser. With a focus on speed and efficiency, Amalgam leverages the power of WebAssembly to deliver smooth video rendering and advanced features.
+A modern web-based video editor with timeline support, real-time preview, and export capabilities.
 
 ## Features
 
-- 🎥 **High-Performance Playback**: Utilizes WebAssembly for efficient video decoding.
-- 📂 **Multiple Format Support**: Supports various video formats for versatile playback.
-- 🌐 **Cross-Platform Compatibility**: Works seamlessly across all modern browsers.
+- Import multiple video formats (MP4, MKV, WebM)
+- Timeline-based editing
+- Real-time preview
+- Effect support (brightness, contrast)
+- Project state persistence
+- Video export
+- Background processing using Web Workers
 
-## Getting Started
+## Setup
 
-To get started with Amalgam, follow these steps:
+1. Install dependencies:
+```bash
+npm install
+```
 
-### Prerequisites
+2. Start development server:
+```bash
+npm start
+```
 
-- Node.js (v14 or later)
-- npm (v6 or later)
+3. Build for production:
+```bash
+npm run build
+```
 
-### Installation
+## Usage
 
-1. Clone the repository:
+1. Import Video Clips:
+   - Click "Import Clips" to select video files
+   - Supported formats: MP4, MKV, WebM
 
-   ```bash
-   git clone https://github.com/signet-marigold/amalgam
-   cd amalgam
-   npm i
-   npm run dev
-   ```
+2. Timeline Editing:
+   - Clips are automatically added to the timeline
+   - Drag clips to reposition
+   - Click × to remove clips
+
+3. Preview:
+   - Use play/pause button to control playback
+   - Drag the timeline slider to seek
+   - Current time and duration are displayed
+
+4. Export:
+   - Click "Export Video" to save the final video
+   - Output format: WebM
+
+5. Project Management:
+   - Project state is automatically saved
+   - Click "New Project" to start fresh
+
+## Technical Details
+
+- Built with React and TypeScript
+- State management using Redux Toolkit
+- Video processing in Web Workers
+- Styled using styled-jsx
+- Vite for development and building
+
+## Browser Support
+
+Requires a modern browser with support for:
+- Web Workers
+- OffscreenCanvas
+- MediaRecorder API
+- WebM video format
