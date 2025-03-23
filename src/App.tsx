@@ -1,11 +1,8 @@
 import React, { useState, useCallback, useEffect } from "react";
-import VideoPlayer from "./components/VideoPlayer";
 import FileInput from "./components/FileInput";
-import VolumeControl from "./components/VolumeControl";
 import ThemeToggleButton from "./components/ThemeToggleButton";
 import Toolbar from "./components/Toolbar";
 import PreviewPlate from "./components/PreviewPlate";
-import RenderPlate from "./components/RenderPlate";
 import ClipPool from "./components/ClipPool";
 import Timeline from "./components/Timeline";
 import ExportDialog from "./components/ExportDialog";
@@ -56,18 +53,10 @@ const App: React.FC = () => {
     setVolume(value);
   }, []);
 
-  if (isFFmpegLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading ...</p>
-      </div>
-    );
-  }
-
   return (
     <>
       <header className="w-full flex justify-between items-center px-5 py-2 border-solid border-b-1 border-bordercolor">
-        <h1 className="text-xl text-center">Browser Video Editor</h1>
+        <h1 className="text-xl text-center">Amalgam</h1>
         <Toolbar/>
         <ThemeToggleButton
           isDarkMode={isDarkMode}
@@ -76,7 +65,13 @@ const App: React.FC = () => {
       </header>
 
       <div className="editor-container">
-        <PreviewPlate/>
+        <PreviewPlate
+          handlePlayPause={handlePlayPause}
+          handleVolumeChange={handleVolumeChange}
+          videoUrl={videoUrl}
+          playing={playing}
+          volume={volume}
+        />
         <ClipPool/>
         <Timeline/>
       </div>
@@ -93,27 +88,6 @@ const App: React.FC = () => {
       </div>
 
       <ErrorNotification/>
-
-      <div className="w-full flex justify-center">
-
-      {videoUrl && (
-        <>
-          <div className="flex flex-col items-center justify-center w-full">
-            <VideoPlayer url={videoUrl} playing={playing} volume={volume} />
-          </div>
-          <div className="flex flex-col items-center justify-center w-full space-y-4">
-            <button
-              onClick={handlePlayPause}
-              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-            >
-              {playing ? "Pause" : "Play"}
-            </button>
-            <VolumeControl volume={volume} onVolumeChange={handleVolumeChange} />
-          </div>
-        </>
-      )}
-
-      </div>
     </>
   );
 };
