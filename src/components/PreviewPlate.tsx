@@ -1,95 +1,113 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PreviewRenderer } from '../timeline/preview-renderer';
 import { Timeline } from '../timeline/timeline';
-import { debug } from '../utils/debug';
+import { useTimeline } from '../hooks/use-timeline';
+import { usePlayback } from '../hooks/use-playback';
 
 interface PreviewPlateProps {
-  timeline: Timeline;
+  width: number;
+  height: number;
+  onExport?: () => void;
 }
 
-const PreviewPlate: React.FC<PreviewPlateProps> = ({ timeline }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const previewRendererRef = useRef<PreviewRenderer | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+const PreviewPlate: React.FC<PreviewPlateProps> = ({ width, height, onExport }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<PreviewRenderer | null>(null);
+  const { timeline } = useTimeline();
+  const { isPlaying, currentTime, play, pause, seek } = usePlayback();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Memoize the time update handler
-  const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time);
-  }, []);
-
+  // Initialize renderer
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !timeline) return;
 
-    // Initialize the preview renderer
-    const previewRenderer = new PreviewRenderer(canvasRef.current, timeline);
-    previewRendererRef.current = previewRenderer;
+    console.log('Initializing PreviewRenderer...');
+    const renderer = new PreviewRenderer(canvasRef.current, timeline);
+    rendererRef.current = renderer;
 
     // Set up time update callback
-    previewRenderer.setTimeUpdateCallback(handleTimeUpdate);
-
-    // Set up timeline event listeners
-    const handleClipRemoved = (e: CustomEvent) => {
-      const clipId = e.detail.clipId;
-      if (previewRendererRef.current) {
-        previewRendererRef.current.cleanupVideoElement(clipId);
-      }
+    renderer.onTimeUpdate = (time) => {
+      seek(time);
     };
 
-    document.getElementById('timeline')?.addEventListener('clipremoved', handleClipRemoved as EventListener);
+    setIsInitialized(true);
 
-    // Cleanup
+    // Cleanup on unmount
     return () => {
-      if (previewRendererRef.current) {
-        previewRendererRef.current.stop();
-      }
-      document.getElementById('timeline')?.removeEventListener('clipremoved', handleClipRemoved as EventListener);
+      console.log('Cleaning up PreviewRenderer...');
+      renderer.cleanup();
+      rendererRef.current = null;
+      setIsInitialized(false);
     };
-  }, [timeline, handleTimeUpdate]);
+  }, [canvasRef, timeline, seek]);
 
-  const handlePlayPause = () => {
-    if (previewRendererRef.current) {
-      if (isPlaying) {
-        previewRendererRef.current.stop();
-      } else {
-        previewRendererRef.current.play();
+  // Handle playback state changes
+  useEffect(() => {
+    if (!rendererRef.current || !isInitialized) return;
+
+    if (isPlaying) {
+      rendererRef.current.play();
+    } else {
+      rendererRef.current.pause();
+    }
+  }, [isPlaying, isInitialized]);
+
+  // Handle timeline updates
+  useEffect(() => {
+    if (!rendererRef.current || !timeline || !isInitialized) return;
+
+    rendererRef.current.updateTimeline(timeline);
+  }, [timeline, isInitialized]);
+
+  // Handle export
+  const handleExport = async () => {
+    if (!rendererRef.current || !isInitialized) {
+      console.error('Cannot export: PreviewRenderer not initialized');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      await rendererRef.current.exportVideo();
+      if (onExport) {
+        onExport();
       }
-      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  // Format time for display
-  const formatTime = (time: number): string => {
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <section className="preview-section">
-      <div className="flex flex-col items-center p-4 space-y-4">
-        <div className="relative">
-          <canvas 
-            ref={canvasRef}
-            className="shadow-lg border border-bordercolor rounded-lg bg-black"
-            style={{ width: '640px', height: '360px' }}
-          />
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4 bg-black/50 px-4 py-2 rounded-lg">
-            <button 
-              className="text-white hover:text-gray-300 transition-colors"
-              onClick={handlePlayPause}
-            >
-              {isPlaying ? '⏸' : '▶'}
-            </button>
-            <div className="text-white font-mono">
-              {formatTime(currentTime)} / {formatTime(timeline.duration)}
-            </div>
-          </div>
-        </div>
+    <div className="preview-plate">
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#000'
+        }}
+      />
+      <div className="preview-controls">
+        <button 
+          onClick={isPlaying ? pause : play}
+          disabled={!isInitialized || isExporting}
+        >
+          {isPlaying ? 'Pause' : 'Play'}
+        </button>
+        <button 
+          onClick={handleExport}
+          disabled={!isInitialized || isExporting}
+        >
+          {isExporting ? 'Exporting...' : 'Export Video'}
+        </button>
       </div>
-    </section>
+    </div>
   );
-}
+};
 
 export default PreviewPlate;

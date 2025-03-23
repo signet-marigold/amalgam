@@ -179,9 +179,9 @@ export class Timeline extends EventEmitter {
         const clipId = clipElement.dataset.clipId;
         const clip = this._clips.find(c => c.id === clipId);
         if (clip) {
-          this._isDragging = true;
+        this._isDragging = true;
           this._draggedClip = clip;
-          this._lastMouseX = e.clientX;
+        this._lastMouseX = e.clientX;
           this._originalTrackId = clip.trackId;
           this._originalStartTime = clip.trackStartTime;
           clipElement.classList.add('dragging');
@@ -199,7 +199,7 @@ export class Timeline extends EventEmitter {
 
       // Update clip position
       this._draggedClip.trackStartTime = Math.max(0, newTime);
-      this._lastMouseX = e.clientX;
+        this._lastMouseX = e.clientX;
 
       // Update clip element position
       const clipElement = document.querySelector(`[data-clip-id="${this._draggedClip.id}"]`) as HTMLElement;
@@ -332,7 +332,7 @@ export class Timeline extends EventEmitter {
   }
 
   addTrack(track: Track): void {
-    this._tracks.push(track);
+      this._tracks.push(track);
     this.emit('trackadded', { track });
   }
 
@@ -386,17 +386,17 @@ export class Timeline extends EventEmitter {
     const clipIndex = this._clips.findIndex(c => c.id === clipId);
     if (clipIndex === -1) return;
 
-    const clip = this._clips[clipIndex];
+      const clip = this._clips[clipIndex];
     const trackId = clip.trackId;
     
     // Remove the clip
-    this._clips.splice(clipIndex, 1);
-    
+      this._clips.splice(clipIndex, 1);
+
     // Remove the clip element from the DOM
-    const clipElement = document.querySelector(`[data-clip-id="${clipId}"]`);
-    if (clipElement) {
-      clipElement.remove();
-    }
+      const clipElement = document.querySelector(`[data-clip-id="${clipId}"]`);
+      if (clipElement) {
+        clipElement.remove();
+      }
 
     // Check if the track is empty (no more clips)
     const trackClips = this._clips.filter(c => c.trackId === trackId);

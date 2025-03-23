@@ -8,57 +8,47 @@ import PreviewPlate from "./components/PreviewPlate";
 import RenderPlate from "./components/RenderPlate";
 import ClipPool from "./components/ClipPool";
 import TimelineComponent from "./components/Timeline";
-import ExportDialog from "./components/ExportDialog";
+import { ExportDialog } from "./components/ExportDialog";
 import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange as processFile } from "./utils/fileUtils";
 import { revokeAllBlobUrls } from "./utils/fileUtils";
 import { Timeline } from './timeline/timeline';
-import { PreviewRenderer } from './renderer/preview-renderer';
+import { PreviewRenderer } from './timeline/preview-renderer';
 import { FinalRenderer } from './renderer/final-renderer';
 import { debug, error as logError } from './utils/debug';
 import { loadFFmpeg } from './utils/ffmpeg-utils';
 import { VideoClip, AudioClip, Clip } from './timeline/clip';
 import { Track, TrackType } from './timeline/track';
+import './styles/export-dialog.css';
 
 const App: React.FC = () => {
   const timelineRef = useRef<Timeline | null>(null);
+  const previewRendererRef = useRef<PreviewRenderer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [volume, setVolume] = useState(1);
   const [clipPool, setClipPool] = useState<VideoClip[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
-  // Initialize timeline once
   useEffect(() => {
-    const initializeTimeline = async () => {
-      try {
-        // Create timeline instance
-        const timeline = new Timeline();
-        
-        // Add initial video track
-        const videoTrack = new Track(TrackType.Video);
-        timeline.addTrack(videoTrack);
+    try {
+      // Initialize timeline
+      const timeline = new Timeline();
+      timelineRef.current = timeline;
 
-        // Store the timeline instance
-        timelineRef.current = timeline;
-        setIsInitialized(true);
-      } catch (error) {
-        debug('Error initializing timeline:', error);
-      }
-    };
-
-    initializeTimeline();
-
-    // Cleanup on unmount
-    return () => {
-      if (timelineRef.current) {
-        timelineRef.current.stopPlayback();
-        timelineRef.current = null;
-      }
-    };
-  }, []); // Empty dependency array since we only want to initialize once
+      // Initialize with an empty timeline
+      const track = new Track(TrackType.Video);
+      timeline.addTrack(track);
+      
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Failed to initialize timeline:', error);
+      setIsInitialized(false);
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     setIsDarkMode(prev => !prev);
@@ -168,6 +158,35 @@ const App: React.FC = () => {
     setIsPlaying(!isPlaying);
   };
 
+  const handleExportClick = () => {
+    if (!previewRendererRef.current || !timelineRef.current) {
+      console.error('Cannot export: PreviewRenderer or Timeline not initialized');
+      return;
+    }
+    setShowExportDialog(true);
+  };
+
+  const handleCloseExportDialog = () => {
+    setShowExportDialog(false);
+  };
+
+  // Add a callback to receive the PreviewRenderer instance from PreviewPlate
+  const handlePreviewRendererInit = (renderer: PreviewRenderer) => {
+    console.log('PreviewRenderer initialized');
+    previewRendererRef.current = renderer;
+    // Ensure timeline is set
+    if (timelineRef.current) {
+      renderer.setTimeline(timelineRef.current);
+    }
+  };
+
+  // Update the timeline whenever it changes
+  useEffect(() => {
+    if (previewRendererRef.current && timelineRef.current) {
+      previewRendererRef.current.setTimeline(timelineRef.current);
+    }
+  }, [timelineRef.current]);
+
   if (!isInitialized) {
     return <div>Loading...</div>;
   }
@@ -185,20 +204,39 @@ const App: React.FC = () => {
             <p>Drag and drop video files here</p>
           </div>
         </div>
-        <PreviewPlate timeline={timelineRef.current!} />
-        <ClipPool 
-          clips={clipPool} 
-          onClipSelect={handleClipSelect} 
-          onClipDelete={handleClipDelete} 
+        <div className="flex-1 flex">
+          <div className="flex-1 flex flex-col">
+            <PreviewPlate 
+              timeline={timelineRef.current!} 
+              onPreviewRendererInit={handlePreviewRendererInit}
+            />
+            <RenderPlate />
+          </div>
+          <ClipPool 
+            clips={clipPool} 
+            onClipSelect={handleClipSelect}
+            onClipDelete={handleClipDelete}
+          />
+        </div>
+        <TimelineComponent 
+          timeline={timelineRef.current!}
         />
-        <TimelineComponent timeline={timelineRef.current!} />
       </div>
       <ErrorNotification />
-      <div className="controls">
-        <button onClick={handlePlayPause}>
-          {isPlaying ? 'Pause' : 'Play'}
+      <div className="flex justify-end p-4">
+        <button
+          onClick={handleExportClick}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Export Video
         </button>
       </div>
+      {showExportDialog && previewRendererRef.current && (
+        <ExportDialog
+          previewRenderer={previewRendererRef.current}
+          onClose={handleCloseExportDialog}
+        />
+      )}
     </div>
   );
 };
