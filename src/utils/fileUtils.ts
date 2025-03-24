@@ -1,5 +1,4 @@
 // src/utils/fileUtils.ts
-import { fetchFile } from "@ffmpeg/util";
 
 /**
  * Processes the file by creating an object URL and
@@ -12,17 +11,18 @@ import { fetchFile } from "@ffmpeg/util";
 export async function handleFileChange(
   file: File,
   setVideoUrl: (url: string) => void,
-  addClip: (clip: File) => void
+  addClip: (clip: any) => void
 ) {
   if (file) {
-    // Create an object URL for the file so it can be displayed.
-    setVideoUrl(URL.createObjectURL(file));
-    // Process the file data using ffmpeg's fetchFile.
-    const fileData = await fetchFile(file);
-    // Create a new file object with the processed data.
-    const newFile = new File([fileData], file.name, { type: file.type });
-    // Add the clip using the provided callback.
-    addClip(newFile);
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+    addClip({
+      id: Date.now(),
+      url,
+      duration: 0,
+      startTime: 0,
+      file: await file.arrayBuffer().then(buffer => new Uint8Array(buffer))
+    });
   }
 }
 

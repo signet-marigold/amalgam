@@ -1,29 +1,72 @@
-import { useState, useEffect } from "react";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { loadFFmpeg } from "../utils/ffmpeg-utils";
+import { useState, useCallback } from 'react';
+import { initFFmpeg, extractAudio, optimizeVideo } from '../utils/ffmpeg-utils';
+import { debug, error as logError } from '../utils/debug';
 
-const useFFmpeg = () => {
-  const [ffmpeg, setFFmpeg] = useState<FFmpeg | null>(null);
-  const [isFFmpegLoading, setIsFFmpegLoading] = useState(true);
+interface UseFFmpegReturn {
+  isInitialized: boolean;
+  isProcessing: boolean;
+  error: string | null;
+  initializeFFmpeg: () => Promise<void>;
+  processVideo: (file: File) => Promise<Blob>;
+  extractAudioTrack: (file: File) => Promise<Blob>;
+}
 
-  useEffect(() => {
-    const initializeFFmpeg = async () => {
-      setIsFFmpegLoading(true);
-      try {
-        const ffmpegInstance = await loadFFmpeg();
-        setFFmpeg(ffmpegInstance);
-      } catch (error) {
-        console.error("Failed to load FFmpeg:", error);
-      } finally {
-        setIsFFmpegLoading(false);
-      }
-    };
+export default function useFFmpeg(): UseFFmpegReturn {
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    initializeFFmpeg();
+  const initializeFFmpeg = useCallback(async () => {
+    try {
+      setError(null);
+      await initFFmpeg();
+      setIsInitialized(true);
+      debug('FFmpeg initialized successfully');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize FFmpeg';
+      logError('FFmpeg initialization failed:', errorMessage);
+      setError(errorMessage);
+    }
   }, []);
 
-  return { ffmpeg, isFFmpegLoading };
-};
+  const processVideo = useCallback(async (file: File): Promise<Blob> => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+      const result = await optimizeVideo(file);
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setIsProcessing(false);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process video';
+      logError('Video processing failed:', errorMessage);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
 
-export default useFFmpeg;
+  const extractAudioTrack = useCallback(async (file: File): Promise<Blob> => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+      const result = await extractAudio(file);
+      setIsProcessing(false);
+      return result;
+    } catch (err) {
+      setIsProcessing(false);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to extract audio';
+      logError('Audio extraction failed:', errorMessage);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
 
+  return {
+    isInitialized,
+    isProcessing,
+    error,
+    initializeFFmpeg,
+    processVideo,
+    extractAudioTrack
+  };
+}

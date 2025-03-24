@@ -13,16 +13,17 @@ import ErrorNotification from "./components/ErrorNotification";
 import useVideoEditor from "./hooks/useVideoEditor";
 import useFFmpeg from "./hooks/useFFmpeg";
 import { handleFileChange } from "./utils/fileUtils";
+import VideoEditor from "./components/VideoEditor";
 
 const App: React.FC = () => {
-  const { ffmpeg, isFFmpegLoading } = useFFmpeg();
+  const { isInitialized, isProcessing, error, initializeFFmpeg, processVideo, extractAudioTrack } = useFFmpeg();
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.3);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const [{ clips }, { addClip }] = useVideoEditor(ffmpeg);
+  const [{ clips }, { addClip }] = useVideoEditor(null);
 
   useEffect(() => {
     document.body.classList.remove('preload-style');
@@ -56,10 +57,10 @@ const App: React.FC = () => {
     setVolume(value);
   }, []);
 
-  if (isFFmpegLoading) {
+  if (isProcessing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Loading ...</p>
+        <p>Processing ...</p>
       </div>
     );
   }
@@ -114,6 +115,8 @@ const App: React.FC = () => {
       )}
 
       </div>
+
+      <VideoEditor/>
     </>
   );
 };
